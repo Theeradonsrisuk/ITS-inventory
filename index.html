@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#111111">
+<title>ITS Inventory</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#fff;--bg2:#f5f5f3;--bg3:#eeecea;
+  --text:#111;--text2:#666;--text3:#999;
+  --border:#e0deda;--border2:#ccc;
+  --green-bg:#eaf3de;--green-text:#27500A;
+  --amber-bg:#faeeda;--amber-text:#633806;
+  --blue-bg:#e6f1fb;--blue-text:#0C447C;
+  --radius:10px;--radius-lg:14px;
+}
+html,body{height:100%;background:#111;font-family:'IBM Plex Sans',sans-serif}
+#app{max-width:430px;margin:0 auto;height:100dvh;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
+
+/* SETUP SCREEN */
+#setup-screen{position:absolute;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center}
+.setup-logo{font-size:48px;margin-bottom:16px}
+.setup-title{font-size:22px;font-weight:600;margin-bottom:8px}
+.setup-sub{font-size:14px;color:var(--text2);margin-bottom:28px;line-height:1.5}
+.setup-step{background:var(--bg2);border-radius:12px;padding:14px 16px;margin-bottom:10px;text-align:left;width:100%}
+.setup-step-num{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+.setup-step-text{font-size:13px;color:var(--text);line-height:1.4}
+.setup-input-wrap{width:100%;margin-top:6px}
+.setup-input{width:100%;padding:10px 12px;border:1.5px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;outline:none;color:var(--text)}
+.setup-input:focus{border-color:#111}
+.btn-setup{width:100%;background:#111;color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:16px}
+.setup-link{font-size:11px;color:var(--text3);margin-top:12px;cursor:pointer;text-decoration:underline}
+
+/* TOPBAR */
+.topbar{background:var(--bg);padding:env(safe-area-inset-top,10px) 14px 0;border-bottom:1px solid var(--border);flex-shrink:0}
+.topbar-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0 8px}
+.app-title{font-size:17px;font-weight:600;color:var(--text)}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#ccc;display:inline-block;margin-left:6px;transition:background .3s;vertical-align:middle}
+.sync-dot.ok{background:#4caf50}
+.sync-dot.syncing{background:#ff9800;animation:pulse 1s infinite}
+.sync-dot.err{background:#f44336}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.top-btns{display:flex;gap:6px}
+.btn-event{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--text)}
+.btn-new{background:#111;color:#fff;border:none;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit}
+.tab-bar{display:flex;border-bottom:1px solid var(--border);margin-top:2px}
+.tab{flex:1;text-align:center;padding:9px 4px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(--text);border-bottom:2px solid #111}
+.search-row{display:flex;gap:6px;padding:8px 0 0}
+.search-wrap{flex:1;position:relative}
+.search-wrap span{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:14px}
+.search-wrap input{width:100%;padding:8px 8px 8px 30px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);font-family:inherit;color:var(--text);outline:none}
+.sort-btn{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 11px;font-size:12px;cursor:pointer;color:var(--text);font-family:inherit;white-space:nowrap}
+.chip-row{display:flex;gap:5px;overflow-x:auto;padding:8px 0;scrollbar-width:none}
+.chip-row::-webkit-scrollbar{display:none}
+.chip{background:var(--bg2);border:1px solid var(--border);border-radius:20px;font-size:11px;padding:4px 11px;cursor:pointer;white-space:nowrap;color:var(--text2);transition:all .15s;flex-shrink:0}
+.chip.active{background:#111;color:#fff;border-color:#111}
+
+/* VIEWS */
+.view{flex:1;overflow-y:auto;padding:8px 14px 80px;-webkit-overflow-scrolling:touch}
+.gh{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);padding:10px 2px 5px;position:sticky;top:0;background:var(--bg);z-index:1}
+.irow{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:6px;background:var(--bg);cursor:pointer}
+.irow:active{background:var(--bg2)}
+.cdot{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;object-fit:cover}
+.imain{flex:1;min-width:0}
+.iname{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.isub{font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iright{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.sp{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap}
+.sa{background:var(--green-bg);color:var(--green-text)}
+.si{background:var(--amber-bg);color:var(--amber-text)}
+.loc-tag{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.empty{text-align:center;padding:48px 16px;color:var(--text2)}
+
+/* EVENT BANNER */
+.ebanner-wrap{padding:4px 14px 0;flex-shrink:0}
+.ebanner{background:var(--blue-bg);border:1px solid #B5D4F4;border-radius:10px;padding:9px 11px;display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:4px}
+.eb-dot{width:8px;height:8px;border-radius:50%;background:#378ADD;flex-shrink:0;animation:pulse 1.5s infinite}
+.eb-text{flex:1;font-size:12px;font-weight:500;color:var(--blue-text)}
+.eb-sub{font-size:10px;color:#185FA5;margin-top:1px}
+
+/* SCAN */
+.scan-view{flex:1;display:flex;flex-direction:column;padding:16px 14px 80px;overflow-y:auto}
+#qr-reader{border-radius:var(--radius-lg);overflow:hidden;background:#000;margin-bottom:14px}
+.scan-result-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;display:none}
+.scan-result-card.show{display:block}
+
+/* EXCEL */
+.excel-view{flex:1;padding:16px 14px 80px;overflow-y:auto}
+.excel-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px}
+.xl-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.btn-xl{width:100%;background:#217346;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px}
+.btn-xl-out{width:100%;background:transparent;color:#217346;border:1px solid #217346;border-radius:8px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
+.preview-table{width:100%;border-collapse:collapse;font-size:11px}
+.preview-table th{background:var(--bg3);padding:6px 8px;text-align:left;color:var(--text2);font-weight:500;border-bottom:1px solid var(--border)}
+.preview-table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text)}
+
+/* STATS */
+.stats-view{flex:1;padding:14px 14px 80px;overflow-y:auto}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.stat-card{background:var(--bg2);border-radius:var(--radius);padding:12px}
+.stat-val{font-size:26px;font-weight:600;font-family:'IBM Plex Mono',monospace}
+.stat-label{font-size:11px;color:var(--text2);margin-top:3px}
+.chart-card{background:var(--bg2);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px}
+.chart-title{font-size:12px;font-weight:600;margin-bottom:10px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.bar-label{font-size:11px;color:var(--text2);width:90px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;background:#111}
+.bar-count{font-size:11px;color:var(--text2);font-family:'IBM Plex Mono',monospace;width:24px;text-align:right}
+
+/* SHEETS */
+.overlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:20}
+.overlay.open{display:block}
+.sheet{position:absolute;bottom:0;left:0;right:0;background:var(--bg);border-radius:18px 18px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);z-index:30;max-height:90%;overflow-y:auto;display:none}
+.sheet.open{display:block}
+.mh{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px}
+.sh-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.flabel{font-size:11px;font-weight:500;color:var(--text2);margin-bottom:4px;margin-top:12px}
+.flabel:first-of-type{margin-top:0}
+.finput{width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);font-family:inherit;outline:none}
+.finput:focus{border-color:#111}
+.fselect{width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);font-family:inherit;outline:none;appearance:none}
+.barcode-row{display:flex;gap:6px}
+.barcode-row .finput{flex:1}
+.scan-mini-btn{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:5px;white-space:nowrap;font-family:inherit}
+.btn-primary{width:100%;background:#111;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-secondary{width:100%;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:13px;cursor:pointer;font-family:inherit;margin-top:8px}
+.btn-green{width:100%;background:#27500A;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-danger{width:100%;background:#A32D2D;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:8px}
+.sopt{padding:11px 12px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:9px}
+.sopt:active{background:var(--bg2)}
+.sopt.active{font-weight:600}
+.sopt.active::after{content:'✓';margin-left:auto}
+.brand-filter-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.bchip{background:var(--bg2);border:1px solid var(--border);border-radius:20px;font-size:11px;padding:3px 10px;cursor:pointer;color:var(--text2)}
+.bchip.active{background:#111;color:#fff;border-color:#111}
+.eitem{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;margin-bottom:4px;border:1px solid var(--border);cursor:pointer}
+.eitem:active{background:var(--bg2)}
+.eitem.checked{background:var(--bg2);border-color:var(--border2)}
+.eitem-check{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.eitem.checked .eitem-check{background:#111;border-color:#111;color:#fff;font-size:12px}
+.date-row{display:flex;gap:8px}
+.date-row>div{flex:1}
+.status-toggle{display:flex;gap:6px}
+.stog{flex:1;padding:9px;border-radius:8px;font-size:12px;font-weight:500;border:1px solid var(--border);cursor:pointer;text-align:center;font-family:inherit;background:var(--bg2);color:var(--text2)}
+.stog.active-avail{background:var(--green-bg);color:var(--green-text);border-color:#9FE1CB}
+.stog.active-inuse{background:var(--amber-bg);color:var(--amber-text);border-color:#FAC775}
+.photo-box{border:1.5px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;cursor:pointer;margin-bottom:4px}
+.photo-box:active{background:var(--bg2)}
+.detail-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)}
+.detail-row:last-child{border-bottom:none}
+.loading-overlay{position:absolute;inset:0;background:rgba(255,255,255,.85);z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:28px}
+.loading-overlay.show{display:flex}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:#111;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:#111;color:#fff;border-radius:20px;padding:8px 18px;font-size:12px;white-space:nowrap;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+#file-import{display:none}
+#file-photo{display:none}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SETUP SCREEN -->
+  <div id="setup-screen">
+    <div class="setup-logo">📦</div>
+    <div class="setup-title">ITS Inventory</div>
+    <div class="setup-sub">Connect to Google Sheets to sync your data across all devices — forever.</div>
+    <div class="setup-step">
+      <div class="setup-step-num">Step 1</div>
+      <div class="setup-step-text">Go to <strong>script.google.com</strong>, open your Inventory Sheet's Script Editor, paste the Apps Script code, and deploy as Web App.</div>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-num">Step 2 — Paste your Web App URL below</div>
+      <div class="setup-input-wrap">
+        <input class="setup-input" id="api-url-input" placeholder="https://script.google.com/macros/s/..." type="url">
+      </div>
+    </div>
+    <button class="btn-setup" onclick="connectAPI()">Connect & Load Data</button>
+    <div class="setup-link" onclick="useDemoMode()">Use demo mode (no Google Sheets, data saved locally)</div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div class="topbar" id="topbar">
+    <div class="topbar-row">
+      <span class="app-title">ITS Inventory <span class="sync-dot" id="sync-dot"></span></span>
+      <div class="top-btns">
+        <button class="btn-event" onclick="openEventSheet()">📅 Event</button>
+        <button class="btn-new" onclick="openNewSheet()">➕ New</button>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab active" id="tab-inventory" onclick="switchTab('inventory')">📦 Inventory</div>
+      <div class="tab" id="tab-scan" onclick="switchTab('scan')">▦ Scan</div>
+      <div class="tab" id="tab-excel" onclick="switchTab('excel')">📊 Excel</div>
+      <div class="tab" id="tab-stats" onclick="switchTab('stats')">📈 Stats</div>
+    </div>
+    <div id="inv-controls">
+      <div class="search-row">
+        <div class="search-wrap"><span>🔍</span><input type="text" placeholder="Search brand, item..." id="srch" oninput="renderInventory()"></div>
+        <button class="sort-btn" onclick="openSortSheet()">⇅ Sort</button>
+      </div>
+      <div class="chip-row" id="chips"></div>
+    </div>
+  </div>
+
+  <div class="ebanner-wrap" id="event-banners"></div>
+
+  <div class="view" id="view-inventory"></div>
+  <div class="scan-view" id="view-scan" style="display:none">
+    <div id="qr-reader"></div>
+    <div class="scan-result-card" id="scan-result-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span id="sr-emoji" style="font-size:24px">📦</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600" id="sr-name">—</div>
+          <div style="font-size:11px;color:var(--text2)" id="sr-detail">—</div>
+        </div>
+        <span class="sp" id="sr-status">—</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-primary" style="margin-top:0;flex:1;padding:10px;font-size:12px" onclick="toggleScannedStatus()">Toggle status</button>
+        <button class="btn-secondary" style="margin-top:0;flex:1;padding:10px;font-size:12px" onclick="clearScan()">Clear</button>
+      </div>
+    </div>
+    <div style="text-align:center;color:var(--text2);font-size:12px;padding:8px 0" id="scan-hint">Point camera at a barcode to look up an item</div>
+  </div>
+  <div class="excel-view" id="view-excel" style="display:none"></div>
+  <div class="stats-view" id="view-stats" style="display:none"></div>
+
+  <div class="overlay" id="ov" onclick="closeAll()"></div>
+
+  <!-- NEW ITEM SHEET -->
+  <div class="sheet" id="new-sheet">
+    <div class="mh"></div>
+    <div class="sh-title">➕ Add new item</div>
+    <div class="flabel">Brand *</div>
+    <input class="finput" id="n-brand" placeholder="e.g. Crowdstrike" list="brand-list" autocomplete="off">
+    <datalist id="brand-list"></datalist>
+    <div class="flabel">Category *</div>
+    <select class="fselect" id="n-cat">
+      <option value="">Select category</option>
+      <option>Roll-up</option><option>Back drop</option><option>Tablecloth</option>
+      <option>Data sheet</option><option>Exhibition Counter</option><option>แท่นอะคลิริค</option>
+      <option>ปลั๊กพ่วง</option><option>Premium</option><option>Other</option>
+    </select>
+    <div class="flabel">Description</div>
+    <input class="finput" id="n-desc" placeholder="e.g. Red Falcon, A4, New...">
+    <div class="flabel">Location</div>
+    <input class="finput" id="n-loc" placeholder="e.g. Warehouse A, Floor 3...">
+    <div class="flabel">Barcode (optional)</div>
+    <div class="barcode-row">
+      <input class="finput" id="n-barcode" placeholder="Scan or type barcode">
+      <button class="scan-mini-btn" onclick="switchTab('scan');closeAll()">▦ Scan</button>
+    </div>
+    <button class="btn-primary" onclick="addItem()">✔ Add to inventory</button>
+    <button class="btn-secondary" onclick="closeAll()">Cancel</button>
+  </div>
+
+  <!-- SORT SHEET -->
+  <div class="sheet" id="sort-sheet">
+    <div class="mh"></div>
+    <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);margin-bottom:8px">Sort by</div>
+    <div class="sopt active" id="so-brand" onclick="setSort('brand')">🏢 Brand</div>
+    <div class="sopt" id="so-category" onclick="setSort('category')">🏷 Category</div>
+    <div class="sopt" id="so-location" onclick="setSort('location')">📍 Location</div>
+    <div class="sopt" id="so-status" onclick="setSort('status')">✔ Status</div>
+  </div>
+
+  <!-- EVENT SHEET -->
+  <div class="sheet" id="event-sheet">
+    <div class="mh"></div>
+    <div class="sh-title">📅 Create event</div>
+    <div class="flabel">Event name *</div>
+    <input class="finput" id="e-name" placeholder="e.g. Interop Bangkok 2025">
+    <div class="date-row">
+      <div><div class="flabel">Start date *</div><input class="finput" type="date" id="e-start"></div>
+      <div><div class="flabel">End date *</div><input class="finput" type="date" id="e-end"></div>
+    </div>
+    <div class="flabel">Filter by brand</div>
+    <div class="brand-filter-row" id="brand-chips"></div>
+    <div class="flabel">Select items to bring</div>
+    <div id="event-items" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px"></div>
+    <div style="font-size:11px;color:var(--text2);text-align:center;margin-top:6px" id="e-sel-count">0 items selected</div>
+    <button class="btn-primary" onclick="createEvent()">📅 Create event</button>
+    <button class="btn-secondary" onclick="closeAll()">Cancel</button>
+  </div>
+
+  <!-- EVENT DETAIL SHEET -->
+  <div class="sheet" id="edetail-sheet">
+    <div class="mh"></div>
+    <div id="edetail-content"></div>
+  </div>
+
+  <!-- ITEM DETAIL SHEET -->
+  <div class="sheet" id="item-sheet">
+    <div class="mh"></div>
+    <div id="item-content"></div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-overlay" id="loading">
+    <div class="spinner"></div>
+    <div style="font-size:13px;color:var(--text2)" id="loading-msg">Syncing...</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <input type="file" id="file-import" accept=".xlsx,.xls" onchange="importExcel(event)">
+  <input type="file" id="file-photo" accept="image/*" onchange="handlePhotoFile(event)">
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────
+const CE={'Roll-up':'🪧','Rollup':'🪧','Back drop':'🖼️','Tablecloth':'🟦','Data sheet':'📄','Exhibition Counter':'🗃️','แท่นอะคลิริค':'🔲','ปลั๊กพ่วง':'🔌','Premium':'🎁','Other':'📦'};
+const CC={'Roll-up':'#eaf3de','Rollup':'#eaf3de','Back drop':'#e6f1fb','Tablecloth':'#faeeda','Data sheet':'#f5f5f3','Exhibition Counter':'#fbeaf0','แท่นอะคลิริค':'#e1f5ee','ปลั๊กพ่วง':'#faece7','Premium':'#faeeda','Other':'#f5f5f3'};
+const SEED=[
+  [1,'Akamai','Back drop','','Available','—',''],[2,'Akamai','Roll-up','','Available','—',''],[3,'Akamai','Roll-up','','Available','—',''],[4,'Akamai','Data sheet','','Available','—',''],[5,'Akamai','Tablecloth','','Available','—',''],
+  [6,'Axgate','Roll-up','','Available','—',''],
+  [7,'Bitdefender','Roll-up','แบบผ้า','Available','—',''],[8,'Bitdefender','แท่นอะคลิริค','ขนาด A5','Available','—',''],[9,'Bitdefender','แท่นอะคลิริค','ขนาด A4','Available','—',''],[10,'Bitdefender','Back drop','','Available','—',''],[11,'Bitdefender','Tablecloth','อยู่ในถุง Black drop','Available','—',''],
+  [12,'Crowdstrike','Roll-up','Red','Available','—',''],[13,'Crowdstrike','Tablecloth','Black by sis 2x3m','Available','—',''],[14,'Crowdstrike','Tablecloth','Red','Available','—',''],[15,'Crowdstrike','Roll-up','นกดำ','Available','—',''],[16,'Crowdstrike','Roll-up','we stop breaches #1','Available','—',''],[17,'Crowdstrike','Roll-up','we stop breaches #2','Available','—',''],[18,'Crowdstrike','Exhibition Counter','','Available','—',''],[19,'Crowdstrike','Data sheet','A5','Available','—',''],[20,'Crowdstrike','Back drop','','Available','—',''],[21,'Crowdstrike','Roll-up','Red Falcon','Available','—',''],[22,'Crowdstrike','Back drop','we stop breaches','Available','—',''],
+  [23,'Cybereason','Roll-up','','Available','—',''],[24,'Cybereason','Tablecloth','','Available','—',''],[25,'Cybereason','Back drop','','Available','—',''],[26,'Cybereason','Data sheet','','Available','—',''],
+  [27,'Cybersecurity','แท่นอะคลิริค','A4','Available','—',''],[28,'Cybersecurity','แท่นอะคลิริค','A5','Available','—',''],[29,'Cybersecurity','แท่นอะคลิริค','A4','Available','—',''],[30,'Cybersecurity','แท่นอะคลิริค','A4','Available','—',''],[31,'Cybersecurity','Exhibition Counter','','Available','—',''],[32,'Cybersecurity','Tablecloth','SIS by Cybersecurity','Available','—',''],[33,'Cybersecurity','Roll-up','SIS สีแดงดำ','Available','—',''],[35,'Cybersecurity','ปลั๊กพ่วง','','Available','—',''],[36,'Cybersecurity','ปลั๊กพ่วง','','Available','—',''],[37,'Cybersecurity','Back drop','','Available','—',''],[39,'Cybersecurity','Roll-up','ดำ','Available','—',''],[40,'Cybersecurity','Roll-up','ขาว','Available','—',''],[41,'Cybersecurity','Data sheet','','Available','—',''],[42,'Cybersecurity','Data sheet','','Available','—',''],
+  [34,'SiS','Roll-up','SIS สีขาว','Available','—',''],[38,'SiS','Roll-up','SIS','Available','—',''],
+  [43,'Darktrace','Roll-up','','Available','—',''],[44,'Darktrace','Back drop','','Available','—',''],[45,'Darktrace','Tablecloth','อยู่ในถุง Black drop','Available','—',''],
+  [46,'Extrahop','Roll-up','','Available','—',''],[47,'Extrahop','Roll-up','','Available','—',''],[48,'Extrahop','Other','ป้าย Data sheet','Available','—',''],[49,'Extrahop','Back drop','ไม่มีโครงเหล็ก','Available','—',''],[50,'Extrahop','Data sheet','A4 แนวตั้ง','Available','—',''],
+  [51,'Hillstone','Tablecloth','','Available','—',''],[52,'Hillstone','Roll-up','','Available','—',''],[53,'Hillstone','Roll-up','','Available','—',''],[54,'Hillstone','Roll-up','','Available','—',''],[55,'Hillstone','Roll-up','','Available','—',''],[56,'Hillstone','Premium','ถุงผ้า','Available','—',''],[57,'Hillstone','Premium','Cable','Available','—',''],[58,'Hillstone','Data sheet','','Available','—',''],
+  [59,'One trust','Roll-up','','Available','—',''],[60,'One trust','Roll-up','','Available','—',''],[61,'One trust','Back drop','','Available','—',''],
+  [62,'Orca','Data sheet','A4','Available','—',''],[63,'Orca','Roll-up','','Available','—',''],[64,'Orca','Roll-up','','Available','—',''],[65,'Orca','Back drop','','Available','—',''],[66,'Orca','Other','ตุ๊กตาเป่าลม สุดคิ้ว','Available','—',''],
+  [67,'Ridge','Roll-up','','Available','—',''],[68,'Ridge','Roll-up','','Available','—',''],
+  [69,'Sans','Roll-up','','Available','—',''],[70,'Sans','Data sheet','','Available','—',''],
+  [71,'Security Scorecard','Back drop','','Available','—',''],[72,'Security Scorecard','Data sheet','','Available','—',''],[73,'Security Scorecard','Roll-up','','Available','—',''],
+  [74,'Sonicwall','Back drop','','Available','—',''],[75,'Sonicwall','Back drop','','Available','—',''],[76,'Sonicwall','Tablecloth','','Available','—',''],[77,'Sonicwall','Premium','สายชาจ','Available','—',''],[78,'Sonicwall','Roll-up','','Available','—',''],[79,'Sonicwall','Roll-up','','Available','—',''],[80,'Sonicwall','Roll-up','','Available','—',''],[81,'Sonicwall','Roll-up','','Available','—',''],[82,'Sonicwall','Data sheet','A4 แนวนอน','Available','—',''],[83,'Sonicwall','Premium','เสื้อโปโล สีดำ','Available','—',''],[84,'Sonicwall','Data sheet','ใบปลิว','Available','—',''],
+  [85,'Vicarius','Roll-up','','Available','—',''],
+  [86,'SendQuick','Roll-up','แบบผ้า #1','Available','—',''],[87,'SendQuick','Roll-up','แบบผ้า #2','Available','—',''],[88,'SendQuick','Back drop','ไม่ค่อยดี','Available','—',''],[89,'SendQuick','Roll-up','New #1','Available','—',''],[90,'SendQuick','Roll-up','New #2','Available','—',''],[91,'SendQuick','Back drop','New','Available','—',''],
+  [92,'Soti','Roll-up','','Available','—',''],[93,'Soti','Back drop','','Available','—',''],[94,'Soti','Data sheet','','Available','—',''],
+  [95,'Radware','Back drop','','Available','—',''],[96,'Radware','Roll-up','','Available','—',''],[97,'Radware','Roll-up','','Available','—','']
+];
+
+let API_URL = localStorage.getItem('its_api_url') || '';
+let demoMode = false;
+let items = [];
+let events = [];
+let nextId = 200;
+let sortBy = 'brand';
+let activeChip = 'All';
+let currentTab = 'inventory';
+let eventBrandFilter = 'All';
+let eventSelectedIds = new Set();
+let qrScanner = null;
+let scannedItemId = null;
+let photoTargetId = null;
+
+// ── SETUP ─────────────────────────────────────────────────────────────
+window.onload = function() {
+  if (API_URL) {
+    document.getElementById('api-url-input').value = API_URL;
+    connectAPI();
+  }
+};
+
+async function connectAPI() {
+  const url = document.getElementById('api-url-input').value.trim();
+  if (!url || !url.startsWith('https://script.google.com')) {
+    toast('Please paste a valid Google Apps Script URL'); return;
+  }
+  API_URL = url;
+  localStorage.setItem('its_api_url', API_URL);
+  showLoading('Connecting to Google Sheets...');
+  try {
+    // First ping to verify connection
+    await apiCall('ping');
+    const res = await apiCall('getItems');
+    if (res.error) throw new Error(res.error);
+    items = res.items.map(normalizeItem);
+    if (items.length === 0) {
+      // First time: seed data
+      items = SEED.map(r => ({id:r[0],brand:r[1],cat:r[2],desc:r[3],status:r[4],loc:r[5],barcode:r[6],photo:''}));
+      for (const item of items) await apiCall('saveItem', item);
+    }
+    const evRes = await apiCall('getEvents');
+    events = evRes.events || [];
+    nextId = items.length ? Math.max(...items.map(i => Number(i.id))) + 1 : 1;
+    hideLoading();
+    document.getElementById('setup-screen').style.display = 'none';
+    setSyncStatus('ok');
+    buildChips(); renderInventory(); renderBanners();
+  } catch(e) {
+    hideLoading();
+    setSyncStatus('err');
+    // Show a helpful error
+    const msg = e.message || 'Unknown error';
+    document.getElementById('setup-screen').innerHTML += 
+      '<div style="background:#fcebeb;border:1px solid #f5b5b5;border-radius:10px;padding:12px 14px;margin-top:12px;font-size:12px;color:#A32D2D;text-align:left">' +
+      '<strong>❌ Connection failed</strong><br><br>' + msg +
+      '<br><br><strong>Common fixes:</strong><br>' +
+      '1. Redeploy script as a <strong>new deployment</strong><br>' +
+      '2. Make sure access is set to <strong>Anyone</strong><br>' +
+      '3. Copy the /exec URL, not the /dev URL</div>';
+  }
+}
+
+function useDemoMode() {
+  demoMode = true;
+  items = SEED.map(r => ({id:r[0],brand:r[1],cat:r[2],desc:r[3],status:r[4],loc:r[5],barcode:r[6],photo:''}));
+  events = JSON.parse(localStorage.getItem('its_events_demo') || '[]');
+  nextId = 200;
+  document.getElementById('setup-screen').style.display = 'none';
+  setSyncStatus('ok');
+  buildChips(); renderInventory(); renderBanners();
+  toast('Demo mode — data saves in this browser only');
+}
+
+function normalizeItem(i) {
+  return { id: Number(i.id)||0, brand:i.brand||'', cat:i.cat||'', desc:i.desc||'', status:i.status||'Available', loc:i.loc||'—', barcode:i.barcode||'', photo:i.photo||'' };
+}
+
+// ── API ───────────────────────────────────────────────────────────────
+// Uses JSONP to call Google Apps Script — no CORS issues from local files
+function apiCall(action, data) {
+  if (demoMode) return Promise.resolve(localAction(action, data));
+  return new Promise((resolve, reject) => {
+    const cbName = '_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const timeout = setTimeout(() => {
+      delete window[cbName];
+      const script = document.getElementById(cbName);
+      if (script) script.remove();
+      reject(new Error('Request timed out (30s). Check your Apps Script URL.'));
+    }, 30000);
+
+    window[cbName] = function(result) {
+      clearTimeout(timeout);
+      delete window[cbName];
+      const script = document.getElementById(cbName);
+      if (script) script.remove();
+      if (result.error) reject(new Error(result.error));
+      else resolve(result);
+    };
+
+    const params = new URLSearchParams({ action, callback: cbName });
+    if (data) params.append('data', JSON.stringify(data));
+    const script = document.createElement('script');
+    script.id = cbName;
+    script.src = API_URL + '?' + params.toString();
+    script.onerror = () => {
+      clearTimeout(timeout);
+      delete window[cbName];
+      reject(new Error('Script load failed. Check the URL and redeploy.'));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+function localAction(action, data) {
+  if (action === 'getItems') return { items: JSON.parse(localStorage.getItem('its_items_demo') || 'null') || [] };
+  if (action === 'getEvents') return { events: JSON.parse(localStorage.getItem('its_events_demo') || '[]') };
+  if (action === 'saveItem' || action === 'updateItem') {
+    const stored = JSON.parse(localStorage.getItem('its_items_demo') || '[]');
+    const idx = stored.findIndex(i => String(i.id) === String(data.id));
+    if (idx >= 0) stored[idx] = data; else stored.push(data);
+    localStorage.setItem('its_items_demo', JSON.stringify(stored));
+    return { ok: true };
+  }
+  if (action === 'saveEvent' || action === 'updateEvent') {
+    const stored = JSON.parse(localStorage.getItem('its_events_demo') || '[]');
+    const idx = stored.findIndex(e => String(e.id) === String(data.id));
+    if (idx >= 0) stored[idx] = data; else stored.push(data);
+    localStorage.setItem('its_events_demo', JSON.stringify(stored));
+    return { ok: true };
+  }
+  if (action === 'bulkUpdate') {
+    const stored = JSON.parse(localStorage.getItem('its_items_demo') || '[]');
+    data.items.forEach(u => { const idx = stored.findIndex(i => String(i.id)===String(u.id)); if(idx>=0) stored[idx].status=u.status; });
+    localStorage.setItem('its_items_demo', JSON.stringify(stored));
+    return { ok: true };
+  }
+  return { ok: true };
+}
+
+// ── SYNC STATUS ───────────────────────────────────────────────────────
+function setSyncStatus(s) {
+  const d = document.getElementById('sync-dot');
+  d.className = 'sync-dot ' + s;
+}
+function showLoading(msg) {
+  document.getElementById('loading-msg').textContent = msg || 'Syncing...';
+  document.getElementById('loading').classList.add('show');
+}
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+
+// ── UTILS ─────────────────────────────────────────────────────────────
+function brands() { return [...new Set(items.map(i => i.brand))].sort(); }
+function emoj(cat) { return CE[cat] || '📦'; }
+function bgc(cat) { return CC[cat] || '#f5f5f3'; }
+function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600); }
+function today() { return new Date().toISOString().split('T')[0]; }
+
+// ── TABS ──────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  ['inventory','scan','excel','stats'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+    document.getElementById('view-'+t).style.display = t===tab ? '' : 'none';
+  });
+  document.getElementById('inv-controls').style.display = tab==='inventory' ? '' : 'none';
+  if (tab==='scan') initScanner(); else stopScanner();
+  if (tab==='excel') renderExcel();
+  if (tab==='stats') renderStats();
+}
+
+// ── INVENTORY ─────────────────────────────────────────────────────────
+function buildChips() {
+  const chips = ['All','Available','In use','By Brand','By Category'];
+  document.getElementById('chips').innerHTML = chips.map(c =>
+    `<div class="chip${c===activeChip?' active':''}" onclick="setChip('${c}')">${c}</div>`).join('');
+}
+function setChip(c) { activeChip=c; if(c==='By Brand') sortBy='brand'; else if(c==='By Category') sortBy='category'; buildChips(); renderInventory(); }
+function setSort(s) {
+  sortBy=s;
+  ['brand','category','location','status'].forEach(k => document.getElementById('so-'+k).classList.toggle('active',k===s));
+  closeAll(); renderInventory();
+}
+
+function renderInventory() {
+  const q = document.getElementById('srch').value.toLowerCase();
+  let list = items.filter(i => {
+    if (activeChip==='Available' && i.status!=='Available') return false;
+    if (activeChip==='In use' && i.status!=='In use at event') return false;
+    if (q && !(i.brand.toLowerCase().includes(q) || i.cat.toLowerCase().includes(q) || (i.desc||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const groups = {};
+  list.forEach(i => {
+    const k = sortBy==='brand'?i.brand : sortBy==='category'?i.cat : sortBy==='location'?(i.loc||'—') : i.status;
+    if (!groups[k]) groups[k]=[];
+    groups[k].push(i);
+  });
+  const keys = Object.keys(groups).sort();
+  let html = '';
+  if (!keys.length) html = '<div class="empty">📦<br><br>No items found</div>';
+  keys.forEach(k => {
+    html += `<div class="gh">${k} <span style="opacity:.5;font-weight:400">(${groups[k].length})</span></div>`;
+    groups[k].forEach(i => {
+      const pill = i.status==='Available'?'sa':'si';
+      const plabel = i.status==='Available'?'Available':'In use';
+      const top = sortBy==='brand' ? i.cat+(i.desc?' · '+i.desc:'') : i.brand+(i.desc?' · '+i.desc:'');
+      const sub = sortBy==='brand' ? i.brand : i.cat;
+      const thumb = i.photo
+        ? `<img src="${i.photo}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;flex-shrink:0">`
+        : `<div class="cdot" style="background:${bgc(i.cat)}">${emoj(i.cat)}</div>`;
+      html += `<div class="irow" onclick="openItemDetail(${i.id})">
+        ${thumb}
+        <div class="imain"><div class="iname">${top}</div><div class="isub">${sub}${i.loc&&i.loc!=='—'?' · 📍'+i.loc:''}</div></div>
+        <div class="iright"><span class="sp ${pill}">${plabel}</span>${i.barcode?`<span class="loc-tag">${String(i.barcode).slice(-6)}</span>`:''}</div>
+      </div>`;
+    });
+  });
+  document.getElementById('view-inventory').innerHTML = html;
+  buildChips();
+}
+
+// ── ITEM DETAIL ───────────────────────────────────────────────────────
+function openItemDetail(id) {
+  const i = items.find(x => x.id==id); if (!i) return;
+  const avA = i.status==='Available' ? 'active-avail' : '';
+  const inA = i.status==='In use at event' ? 'active-inuse' : '';
+  const photoBlock = i.photo
+    ? `<div style="position:relative;margin-bottom:12px">
+        <img src="${i.photo}" style="width:100%;border-radius:10px;max-height:200px;object-fit:cover;display:block">
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button onclick="triggerPhoto(${i.id})" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);font-size:12px;cursor:pointer;font-family:inherit">📷 Replace</button>
+          <button onclick="removePhoto(${i.id})" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);font-size:12px;cursor:pointer;font-family:inherit;color:#A32D2D">✕ Remove</button>
+        </div>
+      </div>`
+    : `<div class="photo-box" onclick="triggerPhoto(${i.id})">
+        <div style="font-size:32px;margin-bottom:6px">📷</div>
+        <div style="font-size:12px;font-weight:500;color:var(--text2)">Add photo</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Take photo or choose from library</div>
+      </div>`;
+  document.getElementById('item-content').innerHTML = `
+    <div class="sh-title"><span style="font-size:26px">${emoj(i.cat)}</span><div><div>${i.brand}</div><div style="font-size:12px;font-weight:400;color:var(--text2)">${i.cat}${i.desc?' · '+i.desc:''}</div></div></div>
+    ${photoBlock}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:var(--bg2);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">Location</div><div style="font-size:13px;font-weight:500">${i.loc||'—'}</div></div>
+      <div style="background:var(--bg2);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">Barcode</div><div style="font-size:12px;font-weight:500;font-family:'IBM Plex Mono',monospace">${i.barcode||'—'}</div></div>
+    </div>
+    <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:6px">Status</div>
+    <div class="status-toggle">
+      <button class="stog ${avA}" onclick="setItemStatus(${i.id},'Available')">✓ Available</button>
+      <button class="stog ${inA}" onclick="setItemStatus(${i.id},'In use at event')">⚡ In use at event</button>
+    </div>
+    <div style="font-size:11px;font-weight:500;color:var(--text2);margin-top:12px;margin-bottom:4px">Location</div>
+    <input class="finput" id="edit-loc" value="${i.loc==='—'?'':i.loc}" placeholder="Add location...">
+    <button class="btn-primary" onclick="saveItemDetail(${i.id})">✔ Save changes</button>
+    <button class="btn-secondary" onclick="closeAll()">Close</button>
+  `;
+  openSheet('item-sheet');
+}
+
+function triggerPhoto(id) {
+  photoTargetId = id;
+  // Allow both camera and library
+  const inp = document.getElementById('file-photo');
+  inp.removeAttribute('capture'); // removing capture allows choosing camera OR library
+  inp.click();
+}
+
+function handlePhotoFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      const MAX = 800;
+      let w=img.width, h=img.height;
+      if (w>MAX||h>MAX) { if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
+      const canvas = document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const data = canvas.toDataURL('image/jpeg', 0.75);
+      const item = items.find(x => x.id==photoTargetId);
+      if (item) {
+        item.photo = data;
+        syncItem(item);
+        openItemDetail(photoTargetId);
+        toast('Photo saved ✓');
+      }
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function removePhoto(id) {
+  const i = items.find(x => x.id==id); if (!i) return;
+  i.photo = ''; syncItem(i); openItemDetail(id); toast('Photo removed');
+}
+
+async function setItemStatus(id, status) {
+  const i = items.find(x => x.id==id); if (!i) return;
+  i.status = status;
+  await syncItem(i);
+  openItemDetail(id); renderInventory(); renderBanners();
+}
+
+async function saveItemDetail(id) {
+  const i = items.find(x => x.id==id); if (!i) return;
+  i.loc = document.getElementById('edit-loc').value.trim() || '—';
+  await syncItem(i);
+  closeAll(); renderInventory(); toast('Item updated ✓');
+}
+
+async function syncItem(item) {
+  setSyncStatus('syncing');
+  try { await apiCall('updateItem', item); setSyncStatus('ok'); }
+  catch(e) { setSyncStatus('err'); toast('Sync failed — check connection'); }
+}
+
+// ── NEW ITEM ──────────────────────────────────────────────────────────
+function openNewSheet() {
+  document.getElementById('brand-list').innerHTML = brands().map(b=>`<option value="${b}">`).join('');
+  ['n-brand','n-cat','n-desc','n-loc','n-barcode'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  openSheet('new-sheet');
+}
+
+async function addItem() {
+  const brand = document.getElementById('n-brand').value.trim();
+  const cat = document.getElementById('n-cat').value;
+  if (!brand||!cat) { toast('Brand and category required'); return; }
+  const newItem = {id:nextId++, brand, cat, desc:document.getElementById('n-desc').value.trim(), status:'Available', loc:document.getElementById('n-loc').value.trim()||'—', barcode:document.getElementById('n-barcode').value.trim(), photo:''};
+  items.push(newItem);
+  showLoading('Adding item...');
+  try { await apiCall('saveItem', newItem); setSyncStatus('ok'); }
+  catch(e) { setSyncStatus('err'); }
+  hideLoading(); closeAll(); renderInventory();
+  toast('Item added ✓');
+}
+
+// ── EVENTS ────────────────────────────────────────────────────────────
+function openEventSheet() {
+  document.getElementById('e-name').value = '';
+  document.getElementById('e-start').value = today();
+  document.getElementById('e-end').value = today();
+  eventBrandFilter = 'All'; eventSelectedIds = new Set();
+  buildBrandChips(); renderEventItems();
+  openSheet('event-sheet');
+}
+function buildBrandChips() {
+  document.getElementById('brand-chips').innerHTML = ['All',...brands()].map(b =>
+    `<div class="bchip${b===eventBrandFilter?' active':''}" onclick="setEBrand('${b}')">${b}</div>`).join('');
+}
+function setEBrand(b) { eventBrandFilter=b; buildBrandChips(); renderEventItems(); }
+function renderEventItems() {
+  const list = items.filter(i => (eventBrandFilter==='All'||i.brand===eventBrandFilter) && i.status==='Available');
+  if (!list.length) {
+    document.getElementById('event-items').innerHTML = '<div style="font-size:12px;color:var(--text2);padding:10px 6px">No available items for this brand</div>';
+    document.getElementById('e-sel-count').textContent = '0 items selected';
+    return;
+  }
+  document.getElementById('event-items').innerHTML = list.map(i => {
+    const c = eventSelectedIds.has(i.id);
+    return `<div class="eitem${c?' checked':''}" onclick="toggleEItem(${i.id})">
+      <div class="eitem-check">${c?'✔':''}</div>
+      <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.brand} — ${i.cat}</div><div style="font-size:10px;color:var(--text2)">${i.desc||'—'}</div></div>
+      <span style="font-size:16px;flex-shrink:0">${emoj(i.cat)}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('e-sel-count').textContent = eventSelectedIds.size + ' items selected';
+}
+function toggleEItem(id) {
+  eventSelectedIds.has(id) ? eventSelectedIds.delete(id) : eventSelectedIds.add(id);
+  renderEventItems();
+}
+async function createEvent() {
+  const name = document.getElementById('e-name').value.trim();
+  const start = document.getElementById('e-start').value;
+  const end = document.getElementById('e-end').value;
+  if (!name||!start||!end) { toast('Fill in event name and dates'); return; }
+  if (!eventSelectedIds.size) { toast('Select at least one item'); return; }
+  const ids = [...eventSelectedIds];
+  const ev = {id: Date.now(), name, start, end, itemIds: ids, active: true};
+  // Update item statuses
+  ids.forEach(id => { const i=items.find(x=>x.id==id); if(i) i.status='In use at event'; });
+  events.push(ev);
+  showLoading('Creating event...');
+  try {
+    await apiCall('saveEvent', ev);
+    await apiCall('bulkUpdate', {items: ids.map(id => ({id, status:'In use at event'}))});
+    setSyncStatus('ok');
+  } catch(e) { setSyncStatus('err'); }
+  hideLoading(); closeAll(); renderInventory(); renderBanners();
+  toast('Event created · '+ids.length+' items in use');
+}
+function renderBanners() {
+  const active = events.filter(e => e.active);
+  document.getElementById('event-banners').innerHTML = active.map(e =>
+    `<div class="ebanner" onclick="openEventDetail(${e.id})">
+      <div class="eb-dot"></div>
+      <div style="flex:1"><div class="eb-text">${e.name}</div><div class="eb-sub">${e.start} → ${e.end} · ${e.itemIds.length} items</div></div>
+      <span>›</span>
+    </div>`).join('');
+}
+function openEventDetail(eid) {
+  const ev = events.find(e => e.id==eid); if (!ev) return;
+  const evItems = items.filter(i => ev.itemIds.map(Number).includes(Number(i.id)));
+  document.getElementById('edetail-content').innerHTML = `
+    <div class="sh-title">📅 ${ev.name}</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:14px">${ev.start} → ${ev.end}</div>
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">ITEMS AT THIS EVENT (${evItems.length})</div>
+    <div style="margin-bottom:14px;max-height:280px;overflow-y:auto">
+      ${evItems.map(i=>`<div class="detail-row">
+        <span style="font-size:18px">${emoj(i.cat)}</span>
+        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">${i.brand} — ${i.cat}</div><div style="font-size:11px;color:var(--text2)">${i.desc||'—'}</div></div>
+        <span class="sp si">In use</span>
+      </div>`).join('')}
+    </div>
+    <button class="btn-green" onclick="returnAll(${ev.id})">✔ Mark all returned</button>
+    <button class="btn-secondary" onclick="closeAll()">Close</button>
+  `;
+  openSheet('edetail-sheet');
+}
+async function returnAll(eid) {
+  const ev = events.find(e => e.id==eid); if (!ev) return;
+  ev.itemIds.forEach(id => { const i=items.find(x=>x.id==id); if(i) i.status='Available'; });
+  ev.active = false;
+  showLoading('Updating...');
+  try {
+    await apiCall('updateEvent', ev);
+    await apiCall('bulkUpdate', {items: ev.itemIds.map(id=>({id,status:'Available'}))});
+    setSyncStatus('ok');
+  } catch(e) { setSyncStatus('err'); }
+  hideLoading(); closeAll(); renderInventory(); renderBanners();
+  toast('All items returned ✓');
+}
+
+// ── SCAN ──────────────────────────────────────────────────────────────
+function initScanner() {
+  if (qrScanner) return;
+  try {
+    qrScanner = new Html5Qrcode('qr-reader');
+    qrScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:120}},onScanSuccess,()=>{})
+      .catch(()=>{ document.getElementById('scan-hint').textContent='Camera permission denied. Enable in browser settings.'; });
+  } catch(e) { document.getElementById('scan-hint').textContent='Scanner not available on this browser.'; }
+}
+function stopScanner() {
+  if (qrScanner) { try { qrScanner.stop().then(()=>{qrScanner.clear();qrScanner=null;}); } catch(e) { qrScanner=null; } }
+}
+function onScanSuccess(code) {
+  const found = items.find(i => i.barcode===code);
+  scannedItemId = found ? found.id : null;
+  document.getElementById('scan-result-card').classList.add('show');
+  if (found) {
+    document.getElementById('sr-emoji').textContent = emoj(found.cat);
+    document.getElementById('sr-name').textContent = found.brand+' — '+found.cat;
+    document.getElementById('sr-detail').textContent = (found.desc||'—')+' · '+found.loc;
+    const sp = document.getElementById('sr-status');
+    sp.textContent = found.status==='Available'?'Available':'In use';
+    sp.className = 'sp '+(found.status==='Available'?'sa':'si');
+    document.getElementById('scan-hint').textContent = 'Item found — tap Toggle to update status';
+  } else {
+    document.getElementById('sr-emoji').textContent = '❓';
+    document.getElementById('sr-name').textContent = 'Unknown barcode';
+    document.getElementById('sr-detail').textContent = code;
+    document.getElementById('sr-status').textContent = '—';
+    document.getElementById('sr-status').className = 'sp';
+    document.getElementById('scan-hint').textContent = 'Not in inventory. Add via New+ button.';
+  }
+}
+async function toggleScannedStatus() {
+  if (!scannedItemId) { toast('No item found'); return; }
+  const i = items.find(x => x.id==scannedItemId); if (!i) return;
+  i.status = i.status==='Available' ? 'In use at event' : 'Available';
+  await syncItem(i); onScanSuccess(i.barcode); renderInventory(); renderBanners();
+  toast('Status: '+i.status);
+}
+function clearScan() {
+  document.getElementById('scan-result-card').classList.remove('show');
+  document.getElementById('scan-hint').textContent = 'Point camera at a barcode to look up an item';
+  scannedItemId = null;
+}
+
+// ── EXCEL ─────────────────────────────────────────────────────────────
+function renderExcel() {
+  const preview = items.slice(0,5);
+  document.getElementById('view-excel').innerHTML = `
+    <div class="excel-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div class="xl-icon" style="background:#217346">📊</div>
+        <div><div style="font-size:13px;font-weight:600">Export to Excel</div><div style="font-size:11px;color:var(--text2)">Download all ${items.length} items as .xlsx</div></div>
+      </div>
+      <button class="btn-xl" onclick="exportExcel()">⬇ Export ITS_Inventory.xlsx</button>
+    </div>
+    <div class="excel-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div class="xl-icon" style="background:#185FA5">⬆</div>
+        <div><div style="font-size:13px;font-weight:600">Import from Excel</div><div style="font-size:11px;color:var(--text2)">Add items from .xlsx file</div></div>
+      </div>
+      <button class="btn-xl-out" onclick="document.getElementById('file-import').click()">📂 Choose Excel file</button>
+    </div>
+    ${!demoMode?`<div class="excel-card" style="background:#fff9e6;border-color:#f0d060">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div class="xl-icon" style="background:#b8860b">🔄</div>
+        <div><div style="font-size:13px;font-weight:600">Sync from Google Sheets</div><div style="font-size:11px;color:var(--text2)">Reload latest data from Sheets</div></div>
+      </div>
+      <button class="btn-xl" style="background:#b8860b" onclick="reloadFromSheets()">🔄 Reload from Google Sheets</button>
+    </div>`:''}
+    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin-bottom:8px">Preview</div>
+    <div style="overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)">
+      <table class="preview-table">
+        <thead><tr><th>Brand</th><th>Category</th><th>Description</th><th>Status</th></tr></thead>
+        <tbody>${preview.map(i=>`<tr><td>${i.brand}</td><td>${i.cat}</td><td>${i.desc||'—'}</td><td><span class="sp ${i.status==='Available'?'sa':'si'}" style="font-size:10px">${i.status==='Available'?'Available':'In use'}</span></td></tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+}
+
+function exportExcel() {
+  const ws_data = [['ID','Brand','Category','Description','Status','Location','Barcode']];
+  items.forEach(i => ws_data.push([i.id,i.brand,i.cat,i.desc||'',i.status,i.loc==='—'?'':i.loc,i.barcode||'']));
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  ws['!cols']=[{wch:6},{wch:18},{wch:20},{wch:25},{wch:18},{wch:16},{wch:18}];
+  XLSX.utils.book_append_sheet(wb,ws,'DATA');
+  const sum = [['Brand','Total','Available','In use']];
+  brands().forEach(b=>{const bi=items.filter(i=>i.brand===b);sum.push([b,bi.length,bi.filter(i=>i.status==='Available').length,bi.filter(i=>i.status!=='Available').length]);});
+  const ws2=XLSX.utils.aoa_to_sheet(sum); ws2['!cols']=[{wch:22},{wch:8},{wch:12},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Summary');
+  XLSX.writeFile(wb,'ITS_Inventory.xlsx');
+  toast('Excel exported ✓');
+}
+
+async function reloadFromSheets() {
+  showLoading('Loading from Google Sheets...');
+  try {
+    const res = await apiCall('getItems');
+    items = res.items.map(normalizeItem);
+    const evRes = await apiCall('getEvents');
+    events = evRes.events || [];
+    nextId = items.length ? Math.max(...items.map(i=>Number(i.id)))+1 : 1;
+    setSyncStatus('ok'); renderInventory(); renderBanners(); renderExcel();
+    toast('Reloaded ✓');
+  } catch(e) { setSyncStatus('err'); toast('Reload failed'); }
+  hideLoading();
+}
+
+async function importExcel(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async function(ev) {
+    try {
+      const wb = XLSX.read(ev.target.result,{type:'binary'});
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+      if (rows.length<2) { toast('No data found'); return; }
+      const h = rows[0].map(x=>String(x).toLowerCase().trim());
+      const gi = n => h.indexOf(n)>=0?h.indexOf(n):-1;
+      let count=0;
+      showLoading('Importing...');
+      for (const row of rows.slice(1)) {
+        const brand=String(row[gi('brand')]||row[0]||'').trim();
+        const cat=String(row[gi('category')]||row[1]||'').trim();
+        if (!brand||!cat) continue;
+        const exists=items.find(i=>i.brand===brand&&i.cat===cat&&(i.desc||'')===(String(row[gi('description')]||row[2]||'').trim()));
+        if (!exists) {
+          const ni={id:nextId++,brand,cat,desc:String(row[gi('description')]||row[2]||'').trim(),status:String(row[gi('status')]||'Available').trim(),loc:String(row[gi('location')]||'—').trim()||'—',barcode:String(row[gi('barcode')]||'').trim(),photo:''};
+          items.push(ni); await apiCall('saveItem',ni); count++;
+        }
+      }
+      hideLoading(); renderInventory(); renderExcel(); setSyncStatus('ok');
+      toast(count+' items imported ✓');
+    } catch(err) { hideLoading(); toast('Error: '+err.message); }
+  };
+  reader.readAsBinaryString(file);
+  e.target.value='';
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────
+function renderStats() {
+  const total=items.length, avail=items.filter(i=>i.status==='Available').length, inuse=items.filter(i=>i.status!=='Available').length;
+  const bCounts=brands().map(b=>({name:b,count:items.filter(i=>i.brand===b).length})).sort((a,b)=>b.count-a.count);
+  const cats=[...new Set(items.map(i=>i.cat))].sort();
+  const cCounts=cats.map(c=>({name:c,count:items.filter(i=>i.cat===c).length})).sort((a,b)=>b.count-a.count);
+  const maxB=bCounts[0]?.count||1, maxC=cCounts[0]?.count||1;
+  document.getElementById('view-stats').innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-label">Total items</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--green-text)">${avail}</div><div class="stat-label">Available</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--amber-text)">${inuse}</div><div class="stat-label">In use</div></div>
+      <div class="stat-card"><div class="stat-val">${brands().length}</div><div class="stat-label">Brands</div></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Items by brand</div>
+      ${bCounts.map(b=>`<div class="bar-row"><div class="bar-label">${b.name}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(b.count/maxB*100)}%"></div></div><div class="bar-count">${b.count}</div></div>`).join('')}
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Items by category</div>
+      ${cCounts.map(c=>`<div class="bar-row"><div class="bar-label">${CE[c.name]||'📦'} ${c.name}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(c.count/maxC*100)}%"></div></div><div class="bar-count">${c.count}</div></div>`).join('')}
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Active events</div>
+      ${events.filter(e=>e.active).length===0?'<div style="font-size:12px;color:var(--text2)">No active events</div>':events.filter(e=>e.active).map(e=>`<div class="bar-row"><div class="bar-label">${e.name}</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#378ADD"></div></div><div class="bar-count">${e.itemIds.length}</div></div>`).join('')}
+    </div>
+    ${!demoMode?`<div style="margin-top:14px"><button class="btn-secondary" onclick="resetAPIUrl()">⚙ Change Google Sheets URL</button></div>`:''}
+  `;
+}
+
+// ── SHEETS ────────────────────────────────────────────────────────────
+function openSheet(id) { document.getElementById('ov').classList.add('open'); document.getElementById(id).classList.add('open'); }
+function closeAll() {
+  document.getElementById('ov').classList.remove('open');
+  ['new-sheet','sort-sheet','event-sheet','edetail-sheet','item-sheet'].forEach(s=>document.getElementById(s).classList.remove('open'));
+}
+function openSortSheet() { openSheet('sort-sheet'); }
+function resetAPIUrl() { localStorage.removeItem('its_api_url'); location.reload(); }
+</script>
+</body>
+</html>

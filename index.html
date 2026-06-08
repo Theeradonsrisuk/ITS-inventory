@@ -675,65 +675,55 @@ function handlePhotoFile(e) {
   e.target.value = '';
 }
 
-function uploadPhotoToDrive(itemId, base64) {
-  return new Promise((resolve, reject) => {
-    const cbName = '_photo_cb_' + Date.now();
-    const timeout = setTimeout(() => {
-      delete window[cbName];
-      const s = document.getElementById(cbName);
-      if(s) s.remove();
-      toast('Upload timed out — photo saved locally only');
-      setSyncStatus('err');
-      reject(new Error('timeout'));
-    }, 60000);
+async function uploadPhotoToDrive(itemId, base64) {
+  // Use fetch POST for photo upload — JSONP can't handle large base64 in URL
+  try {
+    const formData = new FormData();
+    formData.append('action', 'uploadPhoto');
+    formData.append('itemId', String(itemId));
+    formData.append('filename', 'item_' + itemId + '.jpg');
+    formData.append('base64', base64);
 
-    window[cbName] = function(result) {
-      clearTimeout(timeout);
-      delete window[cbName];
-      const s = document.getElementById(cbName);
-      if(s) s.remove();
-      if (result.ok && result.url) {
-        const item = items.find(x => x.id==itemId);
-        if (item) {
-          item.photo = result.url;
-          // Cache locally too
-          try {
-            const photos = JSON.parse(localStorage.getItem('its_photos') || '{}');
-            photos[itemId] = result.url;
-            localStorage.setItem('its_photos', JSON.stringify(photos));
-          } catch(err) {}
-          openItemDetail(itemId);
-          renderInventory();
-        }
-        setSyncStatus('ok');
-        toast('Photo uploaded to Google Drive ✓');
-        resolve(result.url);
-      } else {
-        toast('Upload failed: ' + (result.error||'Unknown'));
-        setSyncStatus('err');
-        reject(new Error(result.error));
-      }
-    };
-
-    const params = new URLSearchParams({
-      action: 'uploadPhoto',
-      callback: cbName,
-      itemId: String(itemId),
-      filename: 'item_' + itemId + '.jpg',
-      base64: base64
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      body: formData,
+      redirect: 'follow'
     });
-    const script = document.createElement('script');
-    script.id = cbName;
-    script.src = API_URL + '?' + params.toString();
-    script.onerror = () => {
-      clearTimeout(timeout);
-      delete window[cbName];
-      toast('Upload failed — check connection');
-      setSyncStatus('err');
-      reject(new Error('script error'));
-    };
-    document.head.appendChild(script);
-  });
+    const text = await res.text();
+    let result;
+    try { result = JSON.parse(text); }
+    catch(e) { throw new Error('Bad response: ' + text.slice(0,100)); }
+
+    if (result.ok && result.url) {
+      const item = items.find(x => x.id==itemId);
+      if (item) {
+        item.photo = result.url;
+        try {
+          const photos = JSON.parse(localStorage.getItem('its_photos') || '{}');
+          photos[itemId] = result.url;
+          localStorage.setItem('its_photos', JSON.stringify(photos));
+        } catch(err) {}
+        openItemDetail(itemId);
+        renderInventory();
+      }
+      setSyncStatus('ok');
+      toast('Photo uploaded to Google Drive ✓');
+      return result.url;
+    } else {
+      throw new Error(result.error || 'Upload failed');
+    }
+  } catch(err) {
+    // Fallback: keep local preview, store base64 in localStorage
+    console.error('Drive upload failed:', err);
+    try {
+      const photos = JSON.parse(localStorage.getItem('its_photos') || '{}');
+      const item = items.find(x => x.id==itemId);
+      if (item) photos[itemId] = item.photo;
+      localStorage.setItem('its_photos', JSON.stringify(photos));
+    } catch(e) {}
+    setSyncStatus('err');
+    toast('Drive upload failed — photo saved on this device only');
+  }
 }
 
 function loadPhotos() {

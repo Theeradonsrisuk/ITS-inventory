@@ -201,6 +201,7 @@ html,body{height:100%;background:#111;font-family:'IBM Plex Sans',sans-serif}
     </div>
     <div class="tab-bar">
       <div class="tab active" id="tab-inventory" onclick="switchTab('inventory')">📦 Inventory</div>
+      <div class="tab" id="tab-events" onclick="switchTab('events')">📅 Events</div>
       <div class="tab" id="tab-scan" onclick="switchTab('scan')">▦ Scan</div>
       <div class="tab" id="tab-excel" onclick="switchTab('excel')">📊 Excel</div>
       <div class="tab" id="tab-stats" onclick="switchTab('stats')">📈 Stats</div>
@@ -217,6 +218,7 @@ html,body{height:100%;background:#111;font-family:'IBM Plex Sans',sans-serif}
   <div class="ebanner-wrap" id="event-banners"></div>
 
   <div class="view" id="view-inventory"></div>
+  <div class="view" id="view-events" style="display:none"></div>
   <div class="scan-view" id="view-scan" style="display:none">
     <div id="qr-reader"></div>
     <div class="scan-result-card" id="scan-result-card">
@@ -375,37 +377,47 @@ async function connectAPI() {
   }
   API_URL = url;
   localStorage.setItem('its_api_url', API_URL);
-  showLoading('Connecting to Google Sheets...');
-  try {
-    // First ping to verify connection
-    await apiCall('ping');
-    const res = await apiCall('getItems');
-    if (res.error) throw new Error(res.error);
-    items = res.items.map(normalizeItem);
-    if (items.length === 0) {
-      // First time: seed data
-      items = SEED.map(r => ({id:r[0],brand:r[1],cat:r[2],desc:r[3],status:r[4],loc:r[5],barcode:r[6],photo:''}));
-      for (const item of items) await apiCall('saveItem', item);
+
+  const MAX_RETRIES = 5;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    showLoading(attempt === 1 ? 'Connecting...' : 'Retrying... (' + attempt + '/' + MAX_RETRIES + ')');
+    try {
+      await apiCall('ping');
+      const res = await apiCall('getItems');
+      if (res.error) throw new Error(res.error);
+      items = res.items.map(normalizeItem);
+      if (items.length === 0) {
+        showLoading('First time — loading your data...');
+        items = SEED.map(r => ({id:r[0],brand:r[1],cat:r[2],desc:r[3],status:r[4],loc:r[5],barcode:r[6],photo:''}));
+        for (const item of items) await apiCall('saveItem', item);
+      }
+      const evRes = await apiCall('getEvents');
+      events = evRes.events || [];
+      nextId = items.length ? Math.max(...items.map(i => Number(i.id))) + 1 : 1;
+      loadPhotos();
+      hideLoading();
+      document.getElementById('setup-screen').style.display = 'none';
+      setSyncStatus('ok');
+      buildChips(); renderInventory(); renderBanners();
+      return;
+    } catch(e) {
+      if (attempt < MAX_RETRIES) {
+        await new Promise(r => setTimeout(r, 2000));
+      } else {
+        hideLoading();
+        setSyncStatus('err');
+        document.querySelectorAll('.connect-error').forEach(el => el.remove());
+        const errDiv = document.createElement('div');
+        errDiv.className = 'connect-error';
+        errDiv.style.cssText = 'background:#fcebeb;border:1px solid #f5b5b5;border-radius:10px;padding:12px 14px;margin-top:12px;font-size:12px;color:#A32D2D;text-align:left';
+        errDiv.innerHTML = '<strong>Connection failed after 5 attempts</strong><br><br>' + (e.message||'Unknown error') +
+          '<br><br><strong>Common fixes:</strong><br>' +
+          '1. Redeploy as a <strong>new deployment</strong><br>' +
+          '2. Access set to <strong>Anyone</strong><br>' +
+          '3. Use the /exec URL not /dev URL';
+        document.getElementById('setup-screen').appendChild(errDiv);
+      }
     }
-    const evRes = await apiCall('getEvents');
-    events = evRes.events || [];
-    nextId = items.length ? Math.max(...items.map(i => Number(i.id))) + 1 : 1;
-    hideLoading();
-    document.getElementById('setup-screen').style.display = 'none';
-    setSyncStatus('ok');
-    buildChips(); renderInventory(); renderBanners();
-  } catch(e) {
-    hideLoading();
-    setSyncStatus('err');
-    // Show a helpful error
-    const msg = e.message || 'Unknown error';
-    document.getElementById('setup-screen').innerHTML += 
-      '<div style="background:#fcebeb;border:1px solid #f5b5b5;border-radius:10px;padding:12px 14px;margin-top:12px;font-size:12px;color:#A32D2D;text-align:left">' +
-      '<strong>❌ Connection failed</strong><br><br>' + msg +
-      '<br><br><strong>Common fixes:</strong><br>' +
-      '1. Redeploy script as a <strong>new deployment</strong><br>' +
-      '2. Make sure access is set to <strong>Anyone</strong><br>' +
-      '3. Copy the /exec URL, not the /dev URL</div>';
   }
 }
 
@@ -414,6 +426,7 @@ function useDemoMode() {
   items = SEED.map(r => ({id:r[0],brand:r[1],cat:r[2],desc:r[3],status:r[4],loc:r[5],barcode:r[6],photo:''}));
   events = JSON.parse(localStorage.getItem('its_events_demo') || '[]');
   nextId = 200;
+  loadPhotos();
   document.getElementById('setup-screen').style.display = 'none';
   setSyncStatus('ok');
   buildChips(); renderInventory(); renderBanners();
@@ -507,14 +520,17 @@ function today() { return new Date().toISOString().split('T')[0]; }
 // ── TABS ──────────────────────────────────────────────────────────────
 function switchTab(tab) {
   currentTab = tab;
-  ['inventory','scan','excel','stats'].forEach(t => {
-    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
-    document.getElementById('view-'+t).style.display = t===tab ? '' : 'none';
+  ['inventory','events','scan','excel','stats'].forEach(t => {
+    const tabEl = document.getElementById('tab-'+t);
+    if (tabEl) tabEl.classList.toggle('active', t===tab);
+    const viewEl = document.getElementById('view-'+t);
+    if (viewEl) viewEl.style.display = t===tab ? '' : 'none';
   });
   document.getElementById('inv-controls').style.display = tab==='inventory' ? '' : 'none';
   if (tab==='scan') initScanner(); else stopScanner();
   if (tab==='excel') renderExcel();
   if (tab==='stats') renderStats();
+  if (tab==='events') renderEventsTab();
 }
 
 // ── INVENTORY ─────────────────────────────────────────────────────────
@@ -626,12 +642,18 @@ function handlePhotoFile(e) {
       const canvas = document.createElement('canvas');
       canvas.width=w; canvas.height=h;
       canvas.getContext('2d').drawImage(img,0,0,w,h);
-      const data = canvas.toDataURL('image/jpeg', 0.75);
+      const data = canvas.toDataURL('image/jpeg', 0.72);
       const item = items.find(x => x.id==photoTargetId);
       if (item) {
         item.photo = data;
-        syncItem(item);
+        // Save photo in localStorage (base64 too large for Sheets)
+        try {
+          const photos = JSON.parse(localStorage.getItem('its_photos') || '{}');
+          photos[item.id] = data;
+          localStorage.setItem('its_photos', JSON.stringify(photos));
+        } catch(e) { console.warn('Photo storage full'); }
         openItemDetail(photoTargetId);
+        renderInventory();
         toast('Photo saved ✓');
       }
     };
@@ -639,6 +661,13 @@ function handlePhotoFile(e) {
   };
   reader.readAsDataURL(file);
   e.target.value = '';
+}
+
+function loadPhotos() {
+  try {
+    const photos = JSON.parse(localStorage.getItem('its_photos') || '{}');
+    items.forEach(i => { if (photos[i.id]) i.photo = photos[i.id]; });
+  } catch(e) {}
 }
 
 function removePhoto(id) {
@@ -679,11 +708,13 @@ async function addItem() {
   if (!brand||!cat) { toast('Brand and category required'); return; }
   const newItem = {id:nextId++, brand, cat, desc:document.getElementById('n-desc').value.trim(), status:'Available', loc:document.getElementById('n-loc').value.trim()||'—', barcode:document.getElementById('n-barcode').value.trim(), photo:''};
   items.push(newItem);
-  showLoading('Adding item...');
-  try { await apiCall('saveItem', newItem); setSyncStatus('ok'); }
-  catch(e) { setSyncStatus('err'); }
-  hideLoading(); closeAll(); renderInventory();
+  // Update UI immediately
+  closeAll(); renderInventory();
   toast('Item added ✓');
+  // Sync in background
+  setSyncStatus('syncing');
+  try { await apiCall('saveItem', newItem); setSyncStatus('ok'); }
+  catch(e) { setSyncStatus('err'); toast('Saved locally — sync failed'); }
 }
 
 // ── EVENTS ────────────────────────────────────────────────────────────
@@ -722,25 +753,91 @@ function toggleEItem(id) {
   renderEventItems();
 }
 async function createEvent() {
-  const name = document.getElementById('e-name').value.trim();
-  const start = document.getElementById('e-start').value;
-  const end = document.getElementById('e-end').value;
-  if (!name||!start||!end) { toast('Fill in event name and dates'); return; }
-  if (!eventSelectedIds.size) { toast('Select at least one item'); return; }
-  const ids = [...eventSelectedIds];
-  const ev = {id: Date.now(), name, start, end, itemIds: ids, active: true};
-  // Update item statuses
-  ids.forEach(id => { const i=items.find(x=>x.id==id); if(i) i.status='In use at event'; });
-  events.push(ev);
-  showLoading('Creating event...');
   try {
-    await apiCall('saveEvent', ev);
-    await apiCall('bulkUpdate', {items: ids.map(id => ({id, status:'In use at event'}))});
-    setSyncStatus('ok');
-  } catch(e) { setSyncStatus('err'); }
-  hideLoading(); closeAll(); renderInventory(); renderBanners();
-  toast('Event created · '+ids.length+' items in use');
+    const name = document.getElementById('e-name').value.trim();
+    const start = document.getElementById('e-start').value;
+    const end = document.getElementById('e-end').value;
+    if (!name||!start||!end) { toast('Fill in event name and dates'); return; }
+    if (!eventSelectedIds.size) { toast('Select at least one item'); return; }
+    const ids = [...eventSelectedIds].map(Number);
+    const ev = {id: Date.now(), name, start, end, itemIds: ids, active: true};
+    // Update locally first
+    ids.forEach(id => { const i=items.find(x=>Number(x.id)===id); if(i) i.status='In use at event'; });
+    events.push(ev);
+    closeAll();
+    renderInventory();
+    renderBanners();
+    renderEventsTab();
+    toast('Event created · ' + ids.length + ' items in use ✓');
+    // Sync in background
+    setSyncStatus('syncing');
+    try {
+      await apiCall('saveEvent', ev);
+      await apiCall('bulkUpdate', {items: ids.map(id => ({id, status:'In use at event'}))});
+      setSyncStatus('ok');
+    } catch(e) { setSyncStatus('err'); }
+  } catch(err) {
+    toast('Error: ' + err.message);
+    console.error(err);
+  }
 }
+function renderEventsTab() {
+  const active = events.filter(e => e.active);
+  const past = events.filter(e => !e.active);
+  let html = '';
+
+  if (!active.length && !past.length) {
+    html = '<div class="empty">📅<br><br>No events yet<br><span style="font-size:11px">Tap Event button to create one</span></div>';
+  }
+
+  if (active.length) {
+    html += '<div class="gh">Active events (' + active.length + ')</div>';
+    active.forEach(ev => {
+      const evItems = items.filter(i => ev.itemIds.map(Number).includes(Number(i.id)));
+      const checked = evItems.filter(i => i._packed).length;
+      html += '<div style="background:var(--blue-bg);border:1px solid #B5D4F4;border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer" onclick="openEventDetail(' + ev.id + ')">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+        '<div style="font-size:13px;font-weight:600;color:var(--blue-text)">' + ev.name + '</div>' +
+        '<span class="sp si">' + evItems.length + ' items</span></div>' +
+        '<div style="font-size:11px;color:#185FA5;margin-bottom:10px">📅 ' + ev.start + ' → ' + ev.end + '</div>' +
+        '<div style="font-size:11px;font-weight:500;color:var(--blue-text);margin-bottom:6px">PACKING CHECKLIST</div>' +
+        evItems.map(i => {
+          const packed = i._packed || false;
+          return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #B5D4F4;cursor:pointer" onclick="event.stopPropagation();togglePacked(' + ev.id + ',' + i.id + ')">' +
+            '<div style="width:18px;height:18px;border-radius:4px;border:1.5px solid #378ADD;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:' + (packed?'#378ADD':'transparent') + ';color:#fff;font-size:11px">' + (packed?'✔':'') + '</div>' +
+            '<span style="font-size:14px">' + emoj(i.cat) + '</span>' +
+            '<div style="flex:1"><div style="font-size:12px;font-weight:500;' + (packed?'text-decoration:line-through;color:var(--text2)':'') + '">' + i.brand + ' — ' + i.cat + '</div>' +
+            '<div style="font-size:10px;color:var(--text2)">' + (i.desc||'—') + '</div></div>' +
+            (i.photo ? '<img src="' + i.photo + '" style="width:28px;height:28px;border-radius:5px;object-fit:cover">' : '') +
+            '</div>';
+        }).join('') +
+        '<button onclick="event.stopPropagation();returnAll(' + ev.id + ')" style="width:100%;margin-top:10px;background:#27500A;color:#fff;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">✔ Mark all returned</button>' +
+        '</div>';
+    });
+  }
+
+  if (past.length) {
+    html += '<div class="gh">Past events (' + past.length + ')</div>';
+    past.forEach(ev => {
+      html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;opacity:.7">' +
+        '<div style="font-size:13px;font-weight:600">' + ev.name + '</div>' +
+        '<div style="font-size:11px;color:var(--text2);margin-top:3px">📅 ' + ev.start + ' → ' + ev.end + ' · ' + ev.itemIds.length + ' items</div>' +
+        '</div>';
+    });
+  }
+
+  const el = document.getElementById('view-events');
+  if (el) el.innerHTML = '<div style="padding:8px 14px 80px">' + html + '</div>';
+}
+
+function togglePacked(evId, itemId) {
+  const i = items.find(x => Number(x.id) === Number(itemId));
+  if (i) {
+    i._packed = !i._packed;
+    renderEventsTab();
+  }
+}
+
 function renderBanners() {
   const active = events.filter(e => e.active);
   document.getElementById('event-banners').innerHTML = active.map(e =>
@@ -773,14 +870,16 @@ async function returnAll(eid) {
   const ev = events.find(e => e.id==eid); if (!ev) return;
   ev.itemIds.forEach(id => { const i=items.find(x=>x.id==id); if(i) i.status='Available'; });
   ev.active = false;
-  showLoading('Updating...');
+  // Update UI immediately
+  closeAll(); renderInventory(); renderBanners();
+  toast('All items returned ✓');
+  // Sync in background
+  setSyncStatus('syncing');
   try {
     await apiCall('updateEvent', ev);
     await apiCall('bulkUpdate', {items: ev.itemIds.map(id=>({id,status:'Available'}))});
     setSyncStatus('ok');
-  } catch(e) { setSyncStatus('err'); }
-  hideLoading(); closeAll(); renderInventory(); renderBanners();
-  toast('All items returned ✓');
+  } catch(e) { setSyncStatus('err'); toast('Saved locally — sync failed'); }
 }
 
 // ── SCAN ──────────────────────────────────────────────────────────────

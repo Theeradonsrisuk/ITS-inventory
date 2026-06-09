@@ -158,12 +158,18 @@ html,body{height:100%;background:#111;font-family:'IBM Plex Sans',sans-serif}
 .photo-box:active{background:var(--bg2)}
 .detail-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)}
 .detail-row:last-child{border-bottom:none}
-.loading-overlay{position:absolute;inset:0;background:rgba(255,255,255,.85);z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:28px}
+.loading-overlay{position:absolute;inset:0;background:rgba(0,0,0,.75);z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;border-radius:28px;backdrop-filter:blur(4px)}
 .loading-overlay.show{display:flex}
-/* Mini sync spinner in top bar */
-.sync-dot.syncing{background:#ff9800;animation:none!important}
-.sync-dot.syncing::after{content:'';display:inline-block;width:8px;height:8px;border:2px solid #ff9800;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;position:absolute;margin-left:-8px}
-.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:#111;border-radius:50%;animation:spin .7s linear infinite}
+.cyber-spinner{position:relative;width:64px;height:64px}
+.cyber-spinner .ring{position:absolute;inset:0;border-radius:50%;border:3px solid transparent}
+.cyber-spinner .ring1{border-top-color:#00ffcc;border-right-color:#00ffcc;animation:spin .9s linear infinite}
+.cyber-spinner .ring2{inset:8px;border-bottom-color:#0099ff;border-left-color:#0099ff;animation:spin .7s linear infinite reverse}
+.cyber-spinner .ring3{inset:16px;border-top-color:#ff00aa;border-right-color:#ff00aa;animation:spin .5s linear infinite}
+.cyber-spinner .dot{position:absolute;inset:26px;border-radius:50%;background:#00ffcc;animation:pulse2 .9s ease-in-out infinite}
+@keyframes pulse2{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
+.cyber-loading-text{color:#00ffcc;font-size:12px;font-family:'IBM Plex Mono',monospace;letter-spacing:.15em;text-transform:uppercase;animation:flicker 2s linear infinite}
+@keyframes flicker{0%,95%,100%{opacity:1}96%,99%{opacity:.4}}
+
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:#111;color:#fff;border-radius:20px;padding:8px 18px;font-size:12px;white-space:nowrap;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s}
 .toast.show{opacity:1}
@@ -243,7 +249,7 @@ html,body{height:100%;background:#111;font-family:'IBM Plex Sans',sans-serif}
   <div class="excel-view" id="view-excel" style="display:none"></div>
   <div class="stats-view" id="view-stats" style="display:none"></div>
 
-  <div class="overlay" id="ov" onclick="closeAll()"></div>
+  <div class="overlay" id="ov" onclick="closeAll()" style="cursor:default"></div>
 
   <!-- NEW ITEM SHEET -->
   <div class="sheet" id="new-sheet">
@@ -319,8 +325,13 @@ html,body{height:100%;background:#111;font-family:'IBM Plex Sans',sans-serif}
 
   <!-- LOADING -->
   <div class="loading-overlay" id="loading">
-    <div class="spinner"></div>
-    <div style="font-size:13px;color:var(--text2)" id="loading-msg">Syncing...</div>
+    <div class="cyber-spinner">
+      <div class="ring ring1"></div>
+      <div class="ring ring2"></div>
+      <div class="ring ring3"></div>
+      <div class="dot"></div>
+    </div>
+    <div class="cyber-loading-text" id="loading-msg">Loading...</div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -1219,18 +1230,24 @@ function renderStats() {
 
 // ── SHEETS ────────────────────────────────────────────────────────────
 function openSheet(id) {
-  document.getElementById('ov').classList.add('open');
+  const ov = document.getElementById('ov');
+  ov.classList.add('open');
+  ov.style.pointerEvents = '';
   const el = document.getElementById(id);
-  el.classList.add('open');
-  // If sheet uses flex layout, switch display to flex
-  if (el.style.flexDirection === 'column') el.style.display = 'flex';
+  // Force display before adding class so transition works
+  el.style.display = (id === 'event-sheet') ? 'flex' : 'block';
+  requestAnimationFrame(() => el.classList.add('open'));
 }
 function closeAll() {
-  document.getElementById('ov').classList.remove('open');
+  const ov = document.getElementById('ov');
+  ov.classList.remove('open');
+  ov.style.pointerEvents = 'none';
   ['new-sheet','sort-sheet','event-sheet','edetail-sheet','item-sheet'].forEach(s=>{
     const el = document.getElementById(s);
     if(el){ el.classList.remove('open'); el.style.display='none'; }
   });
+  // Re-enable pointer events on main content after short delay
+  setTimeout(() => { ov.style.pointerEvents = ''; }, 50);
 }
 function openSortSheet() { openSheet('sort-sheet'); }
 function resetAPIUrl() { localStorage.removeItem('its_api_url'); location.reload(); }

@@ -160,6 +160,9 @@ html,body{height:100%;background:#111;font-family:'IBM Plex Sans',sans-serif}
 .detail-row:last-child{border-bottom:none}
 .loading-overlay{position:absolute;inset:0;background:rgba(255,255,255,.85);z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;border-radius:28px}
 .loading-overlay.show{display:flex}
+/* Mini sync spinner in top bar */
+.sync-dot.syncing{background:#ff9800;animation:none!important}
+.sync-dot.syncing::after{content:'';display:inline-block;width:8px;height:8px;border:2px solid #ff9800;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;position:absolute;margin-left:-8px}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:#111;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:#111;color:#fff;border-radius:20px;padding:8px 18px;font-size:12px;white-space:nowrap;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -280,22 +283,26 @@ html,body{height:100%;background:#111;font-family:'IBM Plex Sans',sans-serif}
   </div>
 
   <!-- EVENT SHEET -->
-  <div class="sheet" id="event-sheet">
-    <div class="mh"></div>
-    <div class="sh-title">📅 Create event</div>
-    <div class="flabel">Event name *</div>
-    <input class="finput" id="e-name" placeholder="e.g. Interop Bangkok 2025">
-    <div class="date-row">
-      <div><div class="flabel">Start date *</div><input class="finput" type="date" id="e-start"></div>
-      <div><div class="flabel">End date *</div><input class="finput" type="date" id="e-end"></div>
+  <div class="sheet" id="event-sheet" style="max-height:92%;display:none;flex-direction:column">
+    <div style="overflow-y:auto;flex:1;padding-bottom:4px">
+      <div class="mh"></div>
+      <div class="sh-title">📅 Create event</div>
+      <div class="flabel">Event name *</div>
+      <input class="finput" id="e-name" placeholder="e.g. Interop Bangkok 2025">
+      <div class="date-row">
+        <div><div class="flabel">Start date *</div><input class="finput" type="date" id="e-start"></div>
+        <div><div class="flabel">End date *</div><input class="finput" type="date" id="e-end"></div>
+      </div>
+      <div class="flabel">Filter by brand</div>
+      <div class="brand-filter-row" id="brand-chips"></div>
+      <div class="flabel">Select items to bring</div>
+      <div id="event-items" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px"></div>
+      <div style="font-size:11px;color:var(--text2);text-align:center;margin-top:6px" id="e-sel-count">0 items selected</div>
     </div>
-    <div class="flabel">Filter by brand</div>
-    <div class="brand-filter-row" id="brand-chips"></div>
-    <div class="flabel">Select items to bring</div>
-    <div id="event-items" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px"></div>
-    <div style="font-size:11px;color:var(--text2);text-align:center;margin-top:6px" id="e-sel-count">0 items selected</div>
-    <button class="btn-primary" onclick="createEvent()">📅 Create event</button>
-    <button class="btn-secondary" onclick="closeAll()">Cancel</button>
+    <div style="flex-shrink:0;padding-top:8px;border-top:1px solid var(--border);margin-top:8px">
+      <button class="btn-primary" style="margin-top:0" onclick="createEvent()">📅 Create event</button>
+      <button class="btn-secondary" onclick="closeAll()">Cancel</button>
+    </div>
   </div>
 
   <!-- EVENT DETAIL SHEET -->
@@ -434,7 +441,11 @@ function useDemoMode() {
 }
 
 function normalizeItem(i) {
-  return { id: Number(i.id)||0, brand:i.brand||'', cat:i.cat||'', desc:i.desc||'', status:i.status||'Available', loc:i.loc||'—', barcode:i.barcode||'', photo:i.photo||'' };
+  let contains = [];
+  let history = [];
+  try { contains = JSON.parse(i.contains||'[]'); } catch(e) {}
+  try { history = JSON.parse(i.history||'[]'); } catch(e) {}
+  return { id: Number(i.id)||0, brand:i.brand||'', cat:i.cat||'', desc:i.desc||'', status:i.status||'Available', loc:i.loc||'—', barcode:i.barcode||'', photo:i.photo||'', contains, history };
 }
 
 // ── API ───────────────────────────────────────────────────────────────
@@ -587,8 +598,11 @@ function renderInventory() {
 // ── ITEM DETAIL ───────────────────────────────────────────────────────
 function openItemDetail(id) {
   const i = items.find(x => x.id==id); if (!i) return;
+  if (!i.contains) i.contains = [];
+  if (!i.history) i.history = [];
   const avA = i.status==='Available' ? 'active-avail' : '';
   const inA = i.status==='In use at event' ? 'active-inuse' : '';
+
   const photoBlock = i.photo
     ? `<div style="position:relative;margin-bottom:12px">
         <img src="${i.photo}" style="width:100%;border-radius:10px;max-height:200px;object-fit:cover;display:block">
@@ -602,24 +616,82 @@ function openItemDetail(id) {
         <div style="font-size:12px;font-weight:500;color:var(--text2)">Add photo</div>
         <div style="font-size:11px;color:var(--text3);margin-top:2px">Take photo or choose from library</div>
       </div>`;
-  document.getElementById('item-content').innerHTML = `
-    <div class="sh-title"><span style="font-size:26px">${emoj(i.cat)}</span><div><div>${i.brand}</div><div style="font-size:12px;font-weight:400;color:var(--text2)">${i.cat}${i.desc?' · '+i.desc:''}</div></div></div>
-    ${photoBlock}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-      <div style="background:var(--bg2);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">Location</div><div style="font-size:13px;font-weight:500">${i.loc||'—'}</div></div>
-      <div style="background:var(--bg2);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text2);margin-bottom:3px">Barcode</div><div style="font-size:12px;font-weight:500;font-family:'IBM Plex Mono',monospace">${i.barcode||'—'}</div></div>
+
+  // Contains block
+  const containsBlock = `
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;margin-top:14px;text-transform:uppercase;letter-spacing:.06em">📦 Also in this bag</div>
+    <div id="contains-list">
+      ${(i.contains||[]).length===0
+        ? '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nothing added yet</div>'
+        : (i.contains||[]).map((c,idx) => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:14px">${emoj(c.cat||'Other')}</span>
+            <div style="flex:1"><div style="font-size:12px;font-weight:500">${c.brand||''} — ${c.cat||''}</div><div style="font-size:10px;color:var(--text2)">${c.desc||''}</div></div>
+            <button onclick="removeContains(${i.id},${idx})" style="background:none;border:none;color:#A32D2D;font-size:14px;cursor:pointer">✕</button>
+          </div>`).join('')
+      }
     </div>
-    <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:6px">Status</div>
+    <div style="display:flex;gap:6px;margin-top:8px">
+      <select class="fselect" id="contains-item-sel" style="flex:1;font-size:12px;padding:7px 8px">
+        <option value="">+ Add item that's in this bag...</option>
+        ${items.filter(x=>x.id!=i.id).map(x=>`<option value="${x.id}">${x.brand} — ${x.cat}${x.desc?' ('+x.desc+')':''}</option>`).join('')}
+      </select>
+      <button onclick="addContains(${i.id})" style="background:#111;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;font-family:inherit">Add</button>
+    </div>`;
+
+  // History block
+  const histBlock = `
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;margin-top:14px;text-transform:uppercase;letter-spacing:.06em">🕐 History</div>
+    ${(i.history||[]).length===0
+      ? '<div style="font-size:12px;color:var(--text3);padding:6px 0">No history yet</div>'
+      : [...(i.history||[])].reverse().map(h=>`<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+          <span style="flex-shrink:0;color:var(--text3);font-size:10px;padding-top:2px;min-width:80px">${h.date||''}</span>
+          <div style="flex:1;color:var(--text)">${h.note||''}</div>
+        </div>`).join('')
+    }`;
+
+  document.getElementById('item-content').innerHTML = `
+    <div class="sh-title"><span style="font-size:26px">${emoj(i.cat)}</span><div style="flex:1"><div>${i.brand}</div><div style="font-size:12px;font-weight:400;color:var(--text2)">${i.cat}${i.desc?' · '+i.desc:''}</div></div></div>
+    ${photoBlock}
+    <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:4px">Brand</div>
+    <input class="finput" id="edit-brand" value="${i.brand}" placeholder="Brand...">
+    <div style="font-size:11px;font-weight:500;color:var(--text2);margin-top:10px;margin-bottom:4px">Description</div>
+    <input class="finput" id="edit-desc" value="${i.desc||''}" placeholder="Description...">
+    <div style="font-size:11px;font-weight:500;color:var(--text2);margin-top:10px;margin-bottom:4px">Location</div>
+    <input class="finput" id="edit-loc" value="${i.loc==='—'?'':i.loc}" placeholder="Add location...">
+    <div style="font-size:11px;font-weight:500;color:var(--text2);margin-top:10px;margin-bottom:6px">Status</div>
     <div class="status-toggle">
       <button class="stog ${avA}" onclick="setItemStatus(${i.id},'Available')">✓ Available</button>
-      <button class="stog ${inA}" onclick="setItemStatus(${i.id},'In use at event')">⚡ In use at event</button>
+      <button class="stog ${inA}" onclick="setItemStatus(${i.id},'In use at event')">⚡ In use</button>
     </div>
-    <div style="font-size:11px;font-weight:500;color:var(--text2);margin-top:12px;margin-bottom:4px">Location</div>
-    <input class="finput" id="edit-loc" value="${i.loc==='—'?'':i.loc}" placeholder="Add location...">
+    ${containsBlock}
+    ${histBlock}
     <button class="btn-primary" onclick="saveItemDetail(${i.id})">✔ Save changes</button>
     <button class="btn-secondary" onclick="closeAll()">Close</button>
   `;
   openSheet('item-sheet');
+}
+
+function addContains(itemId) {
+  const sel = document.getElementById('contains-item-sel');
+  const refId = Number(sel.value);
+  if (!refId) { toast('Select an item first'); return; }
+  const parent = items.find(x => x.id==itemId);
+  const child = items.find(x => x.id==refId);
+  if (!parent || !child) return;
+  if (!parent.contains) parent.contains = [];
+  if (parent.contains.find(c => c.id==refId)) { toast('Already added'); return; }
+  parent.contains.push({id: child.id, brand: child.brand, cat: child.cat, desc: child.desc});
+  syncItem(parent);
+  openItemDetail(itemId);
+  toast('Item added to bag ✓');
+}
+
+function removeContains(itemId, idx) {
+  const parent = items.find(x => x.id==itemId);
+  if (!parent) return;
+  parent.contains.splice(idx, 1);
+  syncItem(parent);
+  openItemDetail(itemId);
 }
 
 function triggerPhoto(id) {
@@ -748,6 +820,10 @@ function removePhoto(id) {
 
 async function setItemStatus(id, status) {
   const i = items.find(x => x.id==id); if (!i) return;
+  const oldStatus = i.status;
+  if (oldStatus === status) return;
+  if (!i.history) i.history = [];
+  i.history.push({ date: new Date().toLocaleDateString('th-TH'), note: (status==='Available'?'✅':'⚡') + ' Status: ' + oldStatus + ' → ' + status });
   i.status = status;
   await syncItem(i);
   openItemDetail(id); renderInventory(); renderBanners();
@@ -755,14 +831,33 @@ async function setItemStatus(id, status) {
 
 async function saveItemDetail(id) {
   const i = items.find(x => x.id==id); if (!i) return;
-  i.loc = document.getElementById('edit-loc').value.trim() || '—';
+  const newLoc = document.getElementById('edit-loc').value.trim() || '—';
+  const newDesc = document.getElementById('edit-desc').value.trim();
+  const newBrand = document.getElementById('edit-brand').value.trim() || i.brand;
+  // Track what changed in history
+  if (!i.history) i.history = [];
+  const changes = [];
+  if (newLoc !== i.loc) changes.push('Location: ' + i.loc + ' → ' + newLoc);
+  if (newDesc !== (i.desc||'')) changes.push('Description: "' + (i.desc||'') + '" → "' + newDesc + '"');
+  if (newBrand !== i.brand) changes.push('Brand: ' + i.brand + ' → ' + newBrand);
+  if (changes.length) {
+    i.history.push({ date: new Date().toLocaleDateString('th-TH'), note: '✏️ Edited: ' + changes.join(', ') });
+  }
+  i.loc = newLoc;
+  i.desc = newDesc;
+  i.brand = newBrand;
   await syncItem(i);
   closeAll(); renderInventory(); toast('Item updated ✓');
 }
 
 async function syncItem(item) {
   setSyncStatus('syncing');
-  try { await apiCall('updateItem', item); setSyncStatus('ok'); }
+  // Serialize contains and history for storage
+  const payload = Object.assign({}, item, {
+    contains: JSON.stringify(item.contains||[]),
+    history: JSON.stringify(item.history||[])
+  });
+  try { await apiCall('updateItem', payload); setSyncStatus('ok'); }
   catch(e) { setSyncStatus('err'); toast('Sync failed — check connection'); }
 }
 
@@ -833,7 +928,7 @@ async function createEvent() {
     const ids = [...eventSelectedIds].map(Number);
     const ev = {id: Date.now(), name, start, end, itemIds: ids, active: true};
     // Update locally first
-    ids.forEach(id => { const i=items.find(x=>Number(x.id)===id); if(i) i.status='In use at event'; });
+    ids.forEach(id => { const i=items.find(x=>Number(x.id)===id); if(i){ i.status='In use at event'; if(!i.history)i.history=[]; i.history.push({date:new Date().toLocaleDateString('th-TH'),note:'⚡ Taken to event: '+name}); } });
     events.push(ev);
     closeAll();
     renderInventory();
@@ -939,7 +1034,7 @@ function openEventDetail(eid) {
 }
 async function returnAll(eid) {
   const ev = events.find(e => e.id==eid); if (!ev) return;
-  ev.itemIds.forEach(id => { const i=items.find(x=>x.id==id); if(i) i.status='Available'; });
+  ev.itemIds.forEach(id => { const i=items.find(x=>x.id==id); if(i){ i.status='Available'; if(!i.history)i.history=[]; i.history.push({date:new Date().toLocaleDateString('th-TH'),note:'✅ Returned from event: '+ev.name}); } });
   ev.active = false;
   // Update UI immediately
   closeAll(); renderInventory(); renderBanners();
@@ -1123,10 +1218,19 @@ function renderStats() {
 }
 
 // ── SHEETS ────────────────────────────────────────────────────────────
-function openSheet(id) { document.getElementById('ov').classList.add('open'); document.getElementById(id).classList.add('open'); }
+function openSheet(id) {
+  document.getElementById('ov').classList.add('open');
+  const el = document.getElementById(id);
+  el.classList.add('open');
+  // If sheet uses flex layout, switch display to flex
+  if (el.style.flexDirection === 'column') el.style.display = 'flex';
+}
 function closeAll() {
   document.getElementById('ov').classList.remove('open');
-  ['new-sheet','sort-sheet','event-sheet','edetail-sheet','item-sheet'].forEach(s=>document.getElementById(s).classList.remove('open'));
+  ['new-sheet','sort-sheet','event-sheet','edetail-sheet','item-sheet'].forEach(s=>{
+    const el = document.getElementById(s);
+    if(el){ el.classList.remove('open'); el.style.display='none'; }
+  });
 }
 function openSortSheet() { openSheet('sort-sheet'); }
 function resetAPIUrl() { localStorage.removeItem('its_api_url'); location.reload(); }

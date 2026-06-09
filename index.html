@@ -4,12 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" content="#111111">
 <title>ITS Inventory</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -17,162 +15,164 @@
   --bg:#fff;--bg2:#f5f5f3;--bg3:#eeecea;
   --text:#111;--text2:#666;--text3:#999;
   --border:#e0deda;--border2:#ccc;
-  --green-bg:#eaf3de;--green-text:#27500A;
-  --amber-bg:#faeeda;--amber-text:#633806;
-  --blue-bg:#e6f1fb;--blue-text:#0C447C;
-  --radius:10px;--radius-lg:14px;
+  --green-bg:#eaf3de;--green:#27500A;
+  --amber-bg:#faeeda;--amber:#633806;
+  --blue-bg:#e6f1fb;--blue:#0C447C;
+  --red-bg:#fcebeb;--red:#A32D2D;
+  --r:10px;--rl:14px;
 }
-html,body{height:100%;background:#111;font-family:'IBM Plex Sans',sans-serif}
+html,body{height:100%;background:#111;font-family:'IBM Plex Sans',sans-serif;overflow:hidden}
 #app{max-width:430px;margin:0 auto;height:100dvh;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
 
-/* SETUP SCREEN */
-#setup-screen{position:absolute;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center}
-.setup-logo{font-size:48px;margin-bottom:16px}
+/* ── SETUP ── */
+#setup{position:absolute;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;overflow-y:auto}
+.setup-logo{font-size:52px;margin-bottom:16px}
 .setup-title{font-size:22px;font-weight:600;margin-bottom:8px}
-.setup-sub{font-size:14px;color:var(--text2);margin-bottom:28px;line-height:1.5}
-.setup-step{background:var(--bg2);border-radius:12px;padding:14px 16px;margin-bottom:10px;text-align:left;width:100%}
-.setup-step-num{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
-.setup-step-text{font-size:13px;color:var(--text);line-height:1.4}
-.setup-input-wrap{width:100%;margin-top:6px}
-.setup-input{width:100%;padding:10px 12px;border:1.5px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;outline:none;color:var(--text)}
+.setup-sub{font-size:13px;color:var(--text2);margin-bottom:24px;line-height:1.6}
+.setup-card{background:var(--bg2);border-radius:12px;padding:14px 16px;margin-bottom:10px;text-align:left;width:100%}
+.setup-num{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.setup-text{font-size:13px;color:var(--text);line-height:1.5}
+.setup-input{width:100%;padding:11px 12px;border:1.5px solid var(--border2);border-radius:8px;font-size:13px;font-family:inherit;outline:none;color:var(--text);margin-top:8px}
 .setup-input:focus{border-color:#111}
-.btn-setup{width:100%;background:#111;color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:16px}
-.setup-link{font-size:11px;color:var(--text3);margin-top:12px;cursor:pointer;text-decoration:underline}
+.btn-connect{width:100%;background:#111;color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:16px}
+.setup-demo{font-size:12px;color:var(--text3);margin-top:14px;cursor:pointer;text-decoration:underline}
+.setup-err{background:var(--red-bg);border:1px solid #f5b5b5;border-radius:10px;padding:12px 14px;margin-top:12px;font-size:12px;color:var(--red);text-align:left;display:none}
 
-/* TOPBAR */
-.topbar{background:var(--bg);padding:env(safe-area-inset-top,10px) 14px 0;border-bottom:1px solid var(--border);flex-shrink:0}
-.topbar-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0 8px}
-.app-title{font-size:17px;font-weight:600;color:var(--text)}
-.sync-dot{width:8px;height:8px;border-radius:50%;background:#ccc;display:inline-block;margin-left:6px;transition:background .3s;vertical-align:middle}
-.sync-dot.ok{background:#4caf50}
-.sync-dot.syncing{background:#ff9800;animation:pulse 1s infinite}
-.sync-dot.err{background:#f44336}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* ── TOPBAR ── */
+.topbar{background:var(--bg);padding:10px 14px 0;border-bottom:1px solid var(--border);flex-shrink:0}
+.topbar-row{display:flex;align-items:center;justify-content:space-between;padding:0 0 8px}
+.app-title{font-size:17px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:7px}
+.sdot{width:8px;height:8px;border-radius:50%;background:#ccc;transition:background .3s;flex-shrink:0}
+.sdot.ok{background:#4caf50}
+.sdot.syncing{background:#ff9800;animation:blink .8s ease-in-out infinite}
+.sdot.err{background:#f44336}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 .top-btns{display:flex;gap:6px}
-.btn-event{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--text)}
-.btn-new{background:#111;color:#fff;border:none;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit}
-.tab-bar{display:flex;border-bottom:1px solid var(--border);margin-top:2px}
-.tab{flex:1;text-align:center;padding:9px 4px;font-size:12px;font-weight:500;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;transition:all .15s}
-.tab.active{color:var(--text);border-bottom:2px solid #111}
-.search-row{display:flex;gap:6px;padding:8px 0 0}
-.search-wrap{flex:1;position:relative}
-.search-wrap span{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:14px}
-.search-wrap input{width:100%;padding:8px 8px 8px 30px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);font-family:inherit;color:var(--text);outline:none}
+.btn-ev{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--text)}
+.btn-nw{background:#111;color:#fff;border:none;border-radius:8px;padding:6px 11px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit}
+.tabs{display:flex;border-bottom:1px solid var(--border)}
+.tab{flex:1;text-align:center;padding:8px 2px;font-size:11px;font-weight:500;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;white-space:nowrap}
+.tab.active{color:var(--text);border-bottom-color:#111}
+.inv-ctrl{padding:8px 0 0}
+.srow{display:flex;gap:6px}
+.swrap{flex:1;position:relative}
+.swrap span{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
+.swrap input{width:100%;padding:8px 8px 8px 30px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);font-family:inherit;color:var(--text);outline:none}
 .sort-btn{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 11px;font-size:12px;cursor:pointer;color:var(--text);font-family:inherit;white-space:nowrap}
-.chip-row{display:flex;gap:5px;overflow-x:auto;padding:8px 0;scrollbar-width:none}
-.chip-row::-webkit-scrollbar{display:none}
-.chip{background:var(--bg2);border:1px solid var(--border);border-radius:20px;font-size:11px;padding:4px 11px;cursor:pointer;white-space:nowrap;color:var(--text2);transition:all .15s;flex-shrink:0}
-.chip.active{background:#111;color:#fff;border-color:#111}
+.chips{display:flex;gap:5px;overflow-x:auto;padding:8px 0;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{background:var(--bg2);border:1px solid var(--border);border-radius:20px;font-size:11px;padding:4px 11px;cursor:pointer;white-space:nowrap;color:var(--text2);flex-shrink:0}
+.chip.on{background:#111;color:#fff;border-color:#111}
 
-/* VIEWS */
-.view{flex:1;overflow-y:auto;padding:8px 14px 80px;-webkit-overflow-scrolling:touch}
+/* ── VIEWS ── */
+.view{flex:1;overflow-y:auto;padding:8px 14px 80px;-webkit-overflow-scrolling:touch;display:none}
+.view.active{display:block}
+.scan-view{flex:1;padding:14px;overflow-y:auto;display:none}
+.scan-view.active{display:block}
+
+/* ── LIST ── */
 .gh{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);padding:10px 2px 5px;position:sticky;top:0;background:var(--bg);z-index:1}
-.irow{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius);border:1px solid var(--border);margin-bottom:6px;background:var(--bg);cursor:pointer}
+.irow{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r);border:1px solid var(--border);margin-bottom:6px;cursor:pointer;background:var(--bg)}
 .irow:active{background:var(--bg2)}
-.cdot{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;object-fit:cover}
+.ithumb{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;object-fit:cover}
 .imain{flex:1;min-width:0}
 .iname{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .isub{font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .iright{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
-.sp{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap}
-.sa{background:var(--green-bg);color:var(--green-text)}
-.si{background:var(--amber-bg);color:var(--amber-text)}
-.loc-tag{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
-.empty{text-align:center;padding:48px 16px;color:var(--text2)}
+.pill{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;white-space:nowrap}
+.pill-av{background:var(--green-bg);color:var(--green)}
+.pill-in{background:var(--amber-bg);color:var(--amber)}
+.mono{font-size:10px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.empty{text-align:center;padding:48px 16px;color:var(--text2);font-size:13px}
 
-/* EVENT BANNER */
-.ebanner-wrap{padding:4px 14px 0;flex-shrink:0}
+/* ── EVENT BANNERS ── */
+.ebanners{padding:4px 14px 0;flex-shrink:0}
 .ebanner{background:var(--blue-bg);border:1px solid #B5D4F4;border-radius:10px;padding:9px 11px;display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:4px}
-.eb-dot{width:8px;height:8px;border-radius:50%;background:#378ADD;flex-shrink:0;animation:pulse 1.5s infinite}
-.eb-text{flex:1;font-size:12px;font-weight:500;color:var(--blue-text)}
-.eb-sub{font-size:10px;color:#185FA5;margin-top:1px}
+.ebdot{width:8px;height:8px;border-radius:50%;background:#378ADD;flex-shrink:0;animation:blink 1.5s infinite}
 
-/* SCAN */
-.scan-view{flex:1;display:flex;flex-direction:column;padding:16px 14px 80px;overflow-y:auto}
-#qr-reader{border-radius:var(--radius-lg);overflow:hidden;background:#000;margin-bottom:14px}
-.scan-result-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;display:none}
-.scan-result-card.show{display:block}
-
-/* EXCEL */
-.excel-view{flex:1;padding:16px 14px 80px;overflow-y:auto}
-.excel-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px}
-.xl-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.btn-xl{width:100%;background:#217346;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px}
-.btn-xl-out{width:100%;background:transparent;color:#217346;border:1px solid #217346;border-radius:8px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
-.preview-table{width:100%;border-collapse:collapse;font-size:11px}
-.preview-table th{background:var(--bg3);padding:6px 8px;text-align:left;color:var(--text2);font-weight:500;border-bottom:1px solid var(--border)}
-.preview-table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text)}
-
-/* STATS */
-.stats-view{flex:1;padding:14px 14px 80px;overflow-y:auto}
-.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.stat-card{background:var(--bg2);border-radius:var(--radius);padding:12px}
-.stat-val{font-size:26px;font-weight:600;font-family:'IBM Plex Mono',monospace}
-.stat-label{font-size:11px;color:var(--text2);margin-top:3px}
-.chart-card{background:var(--bg2);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px}
-.chart-title{font-size:12px;font-weight:600;margin-bottom:10px}
-.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
-.bar-label{font-size:11px;color:var(--text2);width:90px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bar-track{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
-.bar-fill{height:100%;border-radius:4px;background:#111}
-.bar-count{font-size:11px;color:var(--text2);font-family:'IBM Plex Mono',monospace;width:24px;text-align:right}
-
-/* SHEETS */
-.overlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:20}
-.overlay.open{display:block}
-.sheet{position:absolute;bottom:0;left:0;right:0;background:var(--bg);border-radius:18px 18px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 16px);z-index:30;max-height:90%;overflow-y:auto;display:none}
-.sheet.open{display:block}
+/* ── SHEETS ── */
+.overlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:30}
+.overlay.on{display:block}
+.sheet{position:absolute;bottom:0;left:0;right:0;background:var(--bg);border-radius:18px 18px 0 0;z-index:40;max-height:92%;display:none;flex-direction:column}
+.sheet.on{display:flex}
+.sheet-scroll{flex:1;overflow-y:auto;padding:16px 16px 0}
+.sheet-foot{flex-shrink:0;padding:10px 16px calc(env(safe-area-inset-bottom,0px) + 12px);border-top:1px solid var(--border);background:var(--bg)}
 .mh{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px}
 .sh-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
 .flabel{font-size:11px;font-weight:500;color:var(--text2);margin-bottom:4px;margin-top:12px}
 .flabel:first-of-type{margin-top:0}
 .finput{width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);font-family:inherit;outline:none}
 .finput:focus{border-color:#111}
-.fselect{width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);font-family:inherit;outline:none;appearance:none}
-.barcode-row{display:flex;gap:6px}
-.barcode-row .finput{flex:1}
-.scan-mini-btn{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:5px;white-space:nowrap;font-family:inherit}
-.btn-primary{width:100%;background:#111;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px}
-.btn-secondary{width:100%;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:13px;cursor:pointer;font-family:inherit;margin-top:8px}
-.btn-green{width:100%;background:#27500A;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px}
-.btn-danger{width:100%;background:#A32D2D;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:8px}
+.fselect{width:100%;padding:10px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg2);color:var(--text);font-family:inherit;outline:none}
+.drow{display:flex;gap:8px}
+.drow>div{flex:1}
+.btn-p{width:100%;background:#111;color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-s{width:100%;background:transparent;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:13px;cursor:pointer;font-family:inherit;margin-top:8px}
+.btn-g{width:100%;background:#27500A;color:#fff;border:none;border-radius:10px;padding:12px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px}
+.stog{display:flex;gap:6px;margin-top:4px}
+.stog-btn{flex:1;padding:9px;border-radius:8px;font-size:12px;font-weight:500;border:1px solid var(--border);cursor:pointer;text-align:center;font-family:inherit;background:var(--bg2);color:var(--text2)}
+.stog-av{background:var(--green-bg);color:var(--green);border-color:#9FE1CB}
+.stog-in{background:var(--amber-bg);color:var(--amber);border-color:#FAC775}
+.photo-box{border:1.5px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;cursor:pointer;margin:4px 0}
+.photo-box:active{background:var(--bg2)}
 .sopt{padding:11px 12px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:9px}
 .sopt:active{background:var(--bg2)}
-.sopt.active{font-weight:600}
-.sopt.active::after{content:'✓';margin-left:auto}
-.brand-filter-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.sopt.on{font-weight:600}
+.sopt.on::after{content:'✓';margin-left:auto}
+.bchips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
 .bchip{background:var(--bg2);border:1px solid var(--border);border-radius:20px;font-size:11px;padding:3px 10px;cursor:pointer;color:var(--text2)}
-.bchip.active{background:#111;color:#fff;border-color:#111}
-.eitem{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;margin-bottom:4px;border:1px solid var(--border);cursor:pointer}
+.bchip.on{background:#111;color:#fff;border-color:#111}
+.eitem{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;margin-bottom:3px;border:1px solid var(--border);cursor:pointer}
 .eitem:active{background:var(--bg2)}
-.eitem.checked{background:var(--bg2);border-color:var(--border2)}
-.eitem-check{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.eitem.checked .eitem-check{background:#111;border-color:#111;color:#fff;font-size:12px}
-.date-row{display:flex;gap:8px}
-.date-row>div{flex:1}
-.status-toggle{display:flex;gap:6px}
-.stog{flex:1;padding:9px;border-radius:8px;font-size:12px;font-weight:500;border:1px solid var(--border);cursor:pointer;text-align:center;font-family:inherit;background:var(--bg2);color:var(--text2)}
-.stog.active-avail{background:var(--green-bg);color:var(--green-text);border-color:#9FE1CB}
-.stog.active-inuse{background:var(--amber-bg);color:var(--amber-text);border-color:#FAC775}
-.photo-box{border:1.5px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;cursor:pointer;margin-bottom:4px}
-.photo-box:active{background:var(--bg2)}
-.detail-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)}
-.detail-row:last-child{border-bottom:none}
-.loading-overlay{position:absolute;inset:0;background:rgba(0,0,0,.75);z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;border-radius:28px;backdrop-filter:blur(4px)}
-.loading-overlay.show{display:flex}
-.cyber-spinner{position:relative;width:64px;height:64px}
-.cyber-spinner .ring{position:absolute;inset:0;border-radius:50%;border:3px solid transparent}
-.cyber-spinner .ring1{border-top-color:#00ffcc;border-right-color:#00ffcc;animation:spin .9s linear infinite}
-.cyber-spinner .ring2{inset:8px;border-bottom-color:#0099ff;border-left-color:#0099ff;animation:spin .7s linear infinite reverse}
-.cyber-spinner .ring3{inset:16px;border-top-color:#ff00aa;border-right-color:#ff00aa;animation:spin .5s linear infinite}
-.cyber-spinner .dot{position:absolute;inset:26px;border-radius:50%;background:#00ffcc;animation:pulse2 .9s ease-in-out infinite}
-@keyframes pulse2{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.5}}
-.cyber-loading-text{color:#00ffcc;font-size:12px;font-family:'IBM Plex Mono',monospace;letter-spacing:.15em;text-transform:uppercase;animation:flicker 2s linear infinite}
-@keyframes flicker{0%,95%,100%{opacity:1}96%,99%{opacity:.4}}
+.eitem.on{background:var(--bg2);border-color:var(--border2)}
+.echk{width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+.eitem.on .echk{background:#111;border-color:#111}
+.contains-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.contains-row:active{background:var(--bg2)}
+.contains-row:last-child{border-bottom:none}
+.hist-row{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.hist-row:last-child{border-bottom:none}
 
+/* ── STATS ── */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.scard{background:var(--bg2);border-radius:var(--r);padding:12px}
+.sval{font-size:26px;font-weight:600;font-family:'IBM Plex Mono',monospace}
+.slabel{font-size:11px;color:var(--text2);margin-top:3px}
+.ccrd{background:var(--bg2);border-radius:var(--rl);padding:14px;margin-bottom:10px}
+.ctitle{font-size:12px;font-weight:600;margin-bottom:10px}
+.brow{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.blabel{font-size:11px;color:var(--text2);width:100px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btrack{flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.bfill{height:100%;border-radius:4px;background:#111}
+.bcount{font-size:11px;color:var(--text2);font-family:'IBM Plex Mono',monospace;width:24px;text-align:right}
+
+/* ── CYBER LOADER ── */
+.loader{position:absolute;inset:0;background:rgba(0,0,0,.8);z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;backdrop-filter:blur(6px);border-radius:0}
+.loader.on{display:flex}
+.cyring{position:relative;width:72px;height:72px}
+.cr{position:absolute;inset:0;border-radius:50%;border:3px solid transparent}
+.cr1{border-top-color:#00ffcc;border-right-color:#00ffcc;animation:spin .9s linear infinite}
+.cr2{inset:9px;border-bottom-color:#0099ff;border-left-color:#0099ff;animation:spin .7s linear infinite reverse}
+.cr3{inset:18px;border-top-color:#ff00aa;border-right-color:#ff00aa;animation:spin .5s linear infinite}
+.cdot{position:absolute;inset:29px;border-radius:50%;background:#00ffcc;box-shadow:0 0 10px #00ffcc;animation:cpulse .9s ease-in-out infinite}
+@keyframes cpulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.6);opacity:.4}}
+.ctext{color:#00ffcc;font-size:11px;font-family:'IBM Plex Mono',monospace;letter-spacing:.2em;text-transform:uppercase}
 @keyframes spin{to{transform:rotate(360deg)}}
-.toast{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:#111;color:#fff;border-radius:20px;padding:8px 18px;font-size:12px;white-space:nowrap;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s}
-.toast.show{opacity:1}
+
+/* ── TOAST ── */
+.toast{position:absolute;bottom:85px;left:50%;transform:translateX(-50%);background:#111;color:#fff;border-radius:20px;padding:8px 18px;font-size:12px;white-space:nowrap;z-index:150;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90%}
+.toast.on{opacity:1}
+
+/* ── EXCEL ── */
+.xl-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px;margin-bottom:10px}
+.xl-hrow{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.xl-ico{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.btn-xl{width:100%;color:#fff;border:none;border-radius:8px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px}
+.btn-xl-o{width:100%;background:transparent;border:1px solid #217346;color:#217346;border-radius:8px;padding:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
+.ptable{width:100%;border-collapse:collapse;font-size:11px}
+.ptable th{background:var(--bg3);padding:6px 8px;text-align:left;color:var(--text2);font-weight:500;border-bottom:1px solid var(--border)}
+.ptable td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--text)}
+
 #file-import{display:none}
 #file-photo{display:none}
 </style>
@@ -180,405 +180,441 @@ html,body{height:100%;background:#111;font-family:'IBM Plex Sans',sans-serif}
 <body>
 <div id="app">
 
-  <!-- SETUP SCREEN -->
-  <div id="setup-screen">
+  <!-- SETUP -->
+  <div id="setup">
     <div class="setup-logo">📦</div>
     <div class="setup-title">ITS Inventory</div>
-    <div class="setup-sub">Connect to Google Sheets to sync your data across all devices — forever.</div>
-    <div class="setup-step">
-      <div class="setup-step-num">Step 1</div>
-      <div class="setup-step-text">Go to <strong>script.google.com</strong>, open your Inventory Sheet's Script Editor, paste the Apps Script code, and deploy as Web App.</div>
+    <div class="setup-sub">Connect to Google Sheets to sync data across all devices.</div>
+    <div class="setup-card">
+      <div class="setup-num">Step 1</div>
+      <div class="setup-text">Go to <strong>script.google.com</strong>, open your Sheet's Apps Script, paste the backend code, and deploy as Web App.</div>
     </div>
-    <div class="setup-step">
-      <div class="setup-step-num">Step 2 — Paste your Web App URL below</div>
-      <div class="setup-input-wrap">
-        <input class="setup-input" id="api-url-input" placeholder="https://script.google.com/macros/s/..." type="url">
-      </div>
+    <div class="setup-card">
+      <div class="setup-num">Step 2 — Paste your Web App URL</div>
+      <input class="setup-input" id="api-input" placeholder="https://script.google.com/macros/s/..." type="url">
     </div>
-    <button class="btn-setup" onclick="connectAPI()">Connect & Load Data</button>
-    <div class="setup-link" onclick="useDemoMode()">Use demo mode (no Google Sheets, data saved locally)</div>
+    <button class="btn-connect" onclick="connectAPI()">Connect & Load Data</button>
+    <div class="setup-demo" onclick="demoMode()">Use demo mode (data saved on this device only)</div>
+    <div class="setup-err" id="setup-err"></div>
   </div>
 
-  <!-- MAIN APP -->
-  <div class="topbar" id="topbar">
+  <!-- TOPBAR -->
+  <div class="topbar">
     <div class="topbar-row">
-      <span class="app-title">ITS Inventory <span class="sync-dot" id="sync-dot"></span></span>
+      <div class="app-title">ITS Inventory <div class="sdot" id="sdot"></div></div>
       <div class="top-btns">
-        <button class="btn-event" onclick="openEventSheet()">📅 Event</button>
-        <button class="btn-new" onclick="openNewSheet()">➕ New</button>
+        <button class="btn-ev" onclick="openSheet('ev-sheet')">📅 Event</button>
+        <button class="btn-nw" onclick="openSheet('new-sheet')">➕ New</button>
       </div>
     </div>
-    <div class="tab-bar">
-      <div class="tab active" id="tab-inventory" onclick="switchTab('inventory')">📦 Inventory</div>
-      <div class="tab" id="tab-events" onclick="switchTab('events')">📅 Events</div>
-      <div class="tab" id="tab-scan" onclick="switchTab('scan')">▦ Scan</div>
-      <div class="tab" id="tab-excel" onclick="switchTab('excel')">📊 Excel</div>
-      <div class="tab" id="tab-stats" onclick="switchTab('stats')">📈 Stats</div>
+    <div class="tabs">
+      <div class="tab active" data-tab="inv">📦 Inventory</div>
+      <div class="tab" data-tab="events">📅 Events</div>
+      <div class="tab" data-tab="scan">▦ Scan</div>
+      <div class="tab" data-tab="excel">📊 Excel</div>
+      <div class="tab" data-tab="stats">📈 Stats</div>
     </div>
-    <div id="inv-controls">
-      <div class="search-row">
-        <div class="search-wrap"><span>🔍</span><input type="text" placeholder="Search brand, item..." id="srch" oninput="renderInventory()"></div>
-        <button class="sort-btn" onclick="openSortSheet()">⇅ Sort</button>
+    <div class="inv-ctrl" id="inv-ctrl">
+      <div class="srow">
+        <div class="swrap"><span>🔍</span><input type="text" id="srch" placeholder="Search brand, item..." oninput="renderInv()"></div>
+        <button class="sort-btn" onclick="openSheet('sort-sheet')">⇅ Sort</button>
       </div>
-      <div class="chip-row" id="chips"></div>
+      <div class="chips" id="chips"></div>
     </div>
   </div>
 
-  <div class="ebanner-wrap" id="event-banners"></div>
+  <div class="ebanners" id="ebanners"></div>
 
-  <div class="view" id="view-inventory"></div>
-  <div class="view" id="view-events" style="display:none"></div>
-  <div class="scan-view" id="view-scan" style="display:none">
-    <div id="qr-reader"></div>
-    <div class="scan-result-card" id="scan-result-card">
+  <!-- VIEWS -->
+  <div class="view active" id="view-inv"></div>
+  <div class="view" id="view-events"></div>
+  <div class="scan-view" id="view-scan">
+    <div id="qr-reader" style="border-radius:14px;overflow:hidden;background:#000;margin-bottom:12px"></div>
+    <div id="scan-result" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span id="sr-emoji" style="font-size:24px">📦</span>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600" id="sr-name">—</div>
-          <div style="font-size:11px;color:var(--text2)" id="sr-detail">—</div>
-        </div>
-        <span class="sp" id="sr-status">—</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:600" id="sr-name">—</div><div style="font-size:11px;color:var(--text2)" id="sr-detail">—</div></div>
+        <span id="sr-pill" class="pill">—</span>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn-primary" style="margin-top:0;flex:1;padding:10px;font-size:12px" onclick="toggleScannedStatus()">Toggle status</button>
-        <button class="btn-secondary" style="margin-top:0;flex:1;padding:10px;font-size:12px" onclick="clearScan()">Clear</button>
+        <button class="btn-p" style="flex:1;padding:10px;font-size:12px;margin:0" onclick="toggleScanStatus()">Toggle status</button>
+        <button class="btn-s" style="flex:1;padding:10px;font-size:12px;margin:0" onclick="clearScan()">Clear</button>
       </div>
     </div>
-    <div style="text-align:center;color:var(--text2);font-size:12px;padding:8px 0" id="scan-hint">Point camera at a barcode to look up an item</div>
+    <div style="text-align:center;color:var(--text2);font-size:12px;padding:8px" id="scan-hint">Point camera at a barcode</div>
   </div>
-  <div class="excel-view" id="view-excel" style="display:none"></div>
-  <div class="stats-view" id="view-stats" style="display:none"></div>
+  <div class="view" id="view-excel"></div>
+  <div class="view" id="view-stats"></div>
 
-  <div class="overlay" id="ov" onclick="closeAll()" style="cursor:default"></div>
+  <!-- OVERLAY -->
+  <div class="overlay" id="overlay" onclick="closeSheets()"></div>
 
   <!-- NEW ITEM SHEET -->
   <div class="sheet" id="new-sheet">
-    <div class="mh"></div>
-    <div class="sh-title">➕ Add new item</div>
-    <div class="flabel">Brand *</div>
-    <input class="finput" id="n-brand" placeholder="e.g. Crowdstrike" list="brand-list" autocomplete="off">
-    <datalist id="brand-list"></datalist>
-    <div class="flabel">Category *</div>
-    <select class="fselect" id="n-cat">
-      <option value="">Select category</option>
-      <option>Roll-up</option><option>Back drop</option><option>Tablecloth</option>
-      <option>Data sheet</option><option>Exhibition Counter</option><option>แท่นอะคลิริค</option>
-      <option>ปลั๊กพ่วง</option><option>Premium</option><option>Other</option>
-    </select>
-    <div class="flabel">Description</div>
-    <input class="finput" id="n-desc" placeholder="e.g. Red Falcon, A4, New...">
-    <div class="flabel">Location</div>
-    <input class="finput" id="n-loc" placeholder="e.g. Warehouse A, Floor 3...">
-    <div class="flabel">Barcode (optional)</div>
-    <div class="barcode-row">
-      <input class="finput" id="n-barcode" placeholder="Scan or type barcode">
-      <button class="scan-mini-btn" onclick="switchTab('scan');closeAll()">▦ Scan</button>
+    <div class="sheet-scroll">
+      <div class="mh"></div>
+      <div class="sh-title">➕ Add new item</div>
+      <div class="flabel">Brand *</div>
+      <input class="finput" id="n-brand" placeholder="e.g. Crowdstrike" list="brand-dl" autocomplete="off">
+      <datalist id="brand-dl"></datalist>
+      <div class="flabel">Category *</div>
+      <select class="fselect" id="n-cat">
+        <option value="">Select category</option>
+        <option>Roll-up</option><option>Back drop</option><option>Tablecloth</option>
+        <option>Data sheet</option><option>Exhibition Counter</option>
+        <option>แท่นอะคลิริค</option><option>ปลั๊กพ่วง</option><option>Premium</option><option>Other</option>
+      </select>
+      <div class="flabel">Description</div>
+      <input class="finput" id="n-desc" placeholder="e.g. Red, A4, New...">
+      <div class="flabel">Location</div>
+      <input class="finput" id="n-loc" placeholder="e.g. Warehouse A">
+      <div class="flabel">Barcode (optional)</div>
+      <div style="display:flex;gap:6px">
+        <input class="finput" id="n-barcode" placeholder="Scan or type barcode" style="flex:1">
+        <button onclick="switchTo('scan');closeSheets()" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap">▦ Scan</button>
+      </div>
     </div>
-    <button class="btn-primary" onclick="addItem()">✔ Add to inventory</button>
-    <button class="btn-secondary" onclick="closeAll()">Cancel</button>
+    <div class="sheet-foot">
+      <button class="btn-p" onclick="addItem()">✔ Add to inventory</button>
+      <button class="btn-s" onclick="closeSheets()">Cancel</button>
+    </div>
   </div>
 
   <!-- SORT SHEET -->
   <div class="sheet" id="sort-sheet">
-    <div class="mh"></div>
-    <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);margin-bottom:8px">Sort by</div>
-    <div class="sopt active" id="so-brand" onclick="setSort('brand')">🏢 Brand</div>
-    <div class="sopt" id="so-category" onclick="setSort('category')">🏷 Category</div>
-    <div class="sopt" id="so-location" onclick="setSort('location')">📍 Location</div>
-    <div class="sopt" id="so-status" onclick="setSort('status')">✔ Status</div>
+    <div class="sheet-scroll">
+      <div class="mh"></div>
+      <div style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);margin-bottom:8px">Sort by</div>
+      <div class="sopt on" id="so-brand" onclick="setSort('brand')">🏢 Brand</div>
+      <div class="sopt" id="so-category" onclick="setSort('category')">🏷 Category</div>
+      <div class="sopt" id="so-location" onclick="setSort('location')">📍 Location</div>
+      <div class="sopt" id="so-status" onclick="setSort('status')">✔ Status</div>
+    </div>
+    <div class="sheet-foot"><button class="btn-s" onclick="closeSheets()">Close</button></div>
   </div>
 
-  <!-- EVENT SHEET -->
-  <div class="sheet" id="event-sheet" style="max-height:92%;display:none;flex-direction:column">
-    <div style="overflow-y:auto;flex:1;padding-bottom:4px">
+  <!-- EVENT CREATE SHEET -->
+  <div class="sheet" id="ev-sheet">
+    <div class="sheet-scroll">
       <div class="mh"></div>
       <div class="sh-title">📅 Create event</div>
       <div class="flabel">Event name *</div>
-      <input class="finput" id="e-name" placeholder="e.g. Interop Bangkok 2025">
-      <div class="date-row">
-        <div><div class="flabel">Start date *</div><input class="finput" type="date" id="e-start"></div>
-        <div><div class="flabel">End date *</div><input class="finput" type="date" id="e-end"></div>
+      <input class="finput" id="ev-name" placeholder="e.g. Interop Bangkok 2025">
+      <div class="drow">
+        <div><div class="flabel">Start *</div><input class="finput" type="date" id="ev-start"></div>
+        <div><div class="flabel">End *</div><input class="finput" type="date" id="ev-end"></div>
       </div>
       <div class="flabel">Filter by brand</div>
-      <div class="brand-filter-row" id="brand-chips"></div>
+      <div class="bchips" id="ev-brands"></div>
       <div class="flabel">Select items to bring</div>
-      <div id="event-items" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px"></div>
-      <div style="font-size:11px;color:var(--text2);text-align:center;margin-top:6px" id="e-sel-count">0 items selected</div>
+      <div id="ev-items" style="border:1px solid var(--border);border-radius:8px;padding:4px;max-height:200px;overflow-y:auto"></div>
+      <div style="font-size:11px;color:var(--text2);text-align:center;margin-top:6px" id="ev-count">0 selected</div>
     </div>
-    <div style="flex-shrink:0;padding-top:8px;border-top:1px solid var(--border);margin-top:8px">
-      <button class="btn-primary" style="margin-top:0" onclick="createEvent()">📅 Create event</button>
-      <button class="btn-secondary" onclick="closeAll()">Cancel</button>
+    <div class="sheet-foot">
+      <button class="btn-p" onclick="createEvent()">📅 Create event</button>
+      <button class="btn-s" onclick="closeSheets()">Cancel</button>
     </div>
   </div>
 
   <!-- EVENT DETAIL SHEET -->
-  <div class="sheet" id="edetail-sheet">
-    <div class="mh"></div>
-    <div id="edetail-content"></div>
+  <div class="sheet" id="evd-sheet">
+    <div class="sheet-scroll" id="evd-content"></div>
+    <div class="sheet-foot"><button class="btn-s" onclick="closeSheets()">Close</button></div>
   </div>
 
   <!-- ITEM DETAIL SHEET -->
   <div class="sheet" id="item-sheet">
-    <div class="mh"></div>
-    <div id="item-content"></div>
+    <div class="sheet-scroll" id="item-content"></div>
+    <div class="sheet-foot" id="item-foot"></div>
   </div>
 
-  <!-- LOADING -->
-  <div class="loading-overlay" id="loading">
-    <div class="cyber-spinner">
-      <div class="ring ring1"></div>
-      <div class="ring ring2"></div>
-      <div class="ring ring3"></div>
-      <div class="dot"></div>
+  <!-- CYBER LOADER -->
+  <div class="loader" id="loader">
+    <div class="cyring">
+      <div class="cr cr1"></div>
+      <div class="cr cr2"></div>
+      <div class="cr cr3"></div>
+      <div class="cdot"></div>
     </div>
-    <div class="cyber-loading-text" id="loading-msg">Loading...</div>
+    <div class="ctext" id="loader-txt">Loading...</div>
   </div>
 
   <div class="toast" id="toast"></div>
-  <input type="file" id="file-import" accept=".xlsx,.xls" onchange="importExcel(event)">
-  <input type="file" id="file-photo" accept="image/*" onchange="handlePhotoFile(event)">
+  <input type="file" id="file-import" accept=".xlsx,.xls" onchange="importXL(event)">
+  <input type="file" id="file-photo" accept="image/*" onchange="handlePhoto(event)">
 </div>
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────────────
-const CE={'Roll-up':'🪧','Rollup':'🪧','Back drop':'🖼️','Tablecloth':'🟦','Data sheet':'📄','Exhibition Counter':'🗃️','แท่นอะคลิริค':'🔲','ปลั๊กพ่วง':'🔌','Premium':'🎁','Other':'📦'};
-const CC={'Roll-up':'#eaf3de','Rollup':'#eaf3de','Back drop':'#e6f1fb','Tablecloth':'#faeeda','Data sheet':'#f5f5f3','Exhibition Counter':'#fbeaf0','แท่นอะคลิริค':'#e1f5ee','ปลั๊กพ่วง':'#faece7','Premium':'#faeeda','Other':'#f5f5f3'};
-const SEED=[
+// ═══════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════
+const IMGBB = 'fb854adbba2f1ff81b0f12cd13d973c3';
+const CE = {'Roll-up':'🪧','Rollup':'🪧','Back drop':'🖼️','Tablecloth':'🟦','Data sheet':'📄','Exhibition Counter':'🗃️','แท่นอะคลิริค':'🔲','ปลั๊กพ่วง':'🔌','Premium':'🎁','Other':'📦'};
+const CC = {'Roll-up':'#eaf3de','Rollup':'#eaf3de','Back drop':'#e6f1fb','Tablecloth':'#faeeda','Data sheet':'#f5f5f3','Exhibition Counter':'#fbeaf0','แท่นอะคลิริค':'#e1f5ee','ปลั๊กพ่วง':'#faece7','Premium':'#faeeda','Other':'#f5f5f3'};
+
+const SEED = [
   [1,'Akamai','Back drop','','Available','—',''],[2,'Akamai','Roll-up','','Available','—',''],[3,'Akamai','Roll-up','','Available','—',''],[4,'Akamai','Data sheet','','Available','—',''],[5,'Akamai','Tablecloth','','Available','—',''],
   [6,'Axgate','Roll-up','','Available','—',''],
-  [7,'Bitdefender','Roll-up','แบบผ้า','Available','—',''],[8,'Bitdefender','แท่นอะคลิริค','ขนาด A5','Available','—',''],[9,'Bitdefender','แท่นอะคลิริค','ขนาด A4','Available','—',''],[10,'Bitdefender','Back drop','','Available','—',''],[11,'Bitdefender','Tablecloth','อยู่ในถุง Black drop','Available','—',''],
-  [12,'Crowdstrike','Roll-up','Red','Available','—',''],[13,'Crowdstrike','Tablecloth','Black by sis 2x3m','Available','—',''],[14,'Crowdstrike','Tablecloth','Red','Available','—',''],[15,'Crowdstrike','Roll-up','นกดำ','Available','—',''],[16,'Crowdstrike','Roll-up','we stop breaches #1','Available','—',''],[17,'Crowdstrike','Roll-up','we stop breaches #2','Available','—',''],[18,'Crowdstrike','Exhibition Counter','','Available','—',''],[19,'Crowdstrike','Data sheet','A5','Available','—',''],[20,'Crowdstrike','Back drop','','Available','—',''],[21,'Crowdstrike','Roll-up','Red Falcon','Available','—',''],[22,'Crowdstrike','Back drop','we stop breaches','Available','—',''],
+  [7,'Bitdefender','Roll-up','แบบผ้า','Available','—',''],[8,'Bitdefender','แท่นอะคลิริค','ขนาด A5','Available','—',''],[9,'Bitdefender','แท่นอะคลิริค','ขนาด A4','Available','—',''],[10,'Bitdefender','Back drop','','Available','—',''],[11,'Bitdefender','Tablecloth','อยู่ในถุง Back drop','Available','—',''],
+  [12,'Crowdstrike','Roll-up','Red','Available','—',''],[13,'Crowdstrike','Tablecloth','Black 2x3m','Available','—',''],[14,'Crowdstrike','Tablecloth','Red','Available','—',''],[15,'Crowdstrike','Roll-up','นกดำ','Available','—',''],[16,'Crowdstrike','Roll-up','we stop breaches #1','Available','—',''],[17,'Crowdstrike','Roll-up','we stop breaches #2','Available','—',''],[18,'Crowdstrike','Exhibition Counter','','Available','—',''],[19,'Crowdstrike','Data sheet','A5','Available','—',''],[20,'Crowdstrike','Back drop','','Available','—',''],[21,'Crowdstrike','Roll-up','Red Falcon','Available','—',''],[22,'Crowdstrike','Back drop','we stop breaches','Available','—',''],
   [23,'Cybereason','Roll-up','','Available','—',''],[24,'Cybereason','Tablecloth','','Available','—',''],[25,'Cybereason','Back drop','','Available','—',''],[26,'Cybereason','Data sheet','','Available','—',''],
-  [27,'Cybersecurity','แท่นอะคลิริค','A4','Available','—',''],[28,'Cybersecurity','แท่นอะคลิริค','A5','Available','—',''],[29,'Cybersecurity','แท่นอะคลิริค','A4','Available','—',''],[30,'Cybersecurity','แท่นอะคลิริค','A4','Available','—',''],[31,'Cybersecurity','Exhibition Counter','','Available','—',''],[32,'Cybersecurity','Tablecloth','SIS by Cybersecurity','Available','—',''],[33,'Cybersecurity','Roll-up','SIS สีแดงดำ','Available','—',''],[35,'Cybersecurity','ปลั๊กพ่วง','','Available','—',''],[36,'Cybersecurity','ปลั๊กพ่วง','','Available','—',''],[37,'Cybersecurity','Back drop','','Available','—',''],[39,'Cybersecurity','Roll-up','ดำ','Available','—',''],[40,'Cybersecurity','Roll-up','ขาว','Available','—',''],[41,'Cybersecurity','Data sheet','','Available','—',''],[42,'Cybersecurity','Data sheet','','Available','—',''],
+  [27,'Cybersecurity','แท่นอะคลิริค','A4 #1','Available','—',''],[28,'Cybersecurity','แท่นอะคลิริค','A5','Available','—',''],[29,'Cybersecurity','แท่นอะคลิริค','A4 #2','Available','—',''],[30,'Cybersecurity','แท่นอะคลิริค','A4 #3','Available','—',''],[31,'Cybersecurity','Exhibition Counter','','Available','—',''],[32,'Cybersecurity','Tablecloth','SIS by Cybersecurity','Available','—',''],[33,'Cybersecurity','Roll-up','SIS สีแดงดำ','Available','—',''],[35,'Cybersecurity','ปลั๊กพ่วง','#1','Available','—',''],[36,'Cybersecurity','ปลั๊กพ่วง','#2','Available','—',''],[37,'Cybersecurity','Back drop','','Available','—',''],[39,'Cybersecurity','Roll-up','ดำ','Available','—',''],[40,'Cybersecurity','Roll-up','ขาว','Available','—',''],[41,'Cybersecurity','Data sheet','#1','Available','—',''],[42,'Cybersecurity','Data sheet','#2','Available','—',''],
   [34,'SiS','Roll-up','SIS สีขาว','Available','—',''],[38,'SiS','Roll-up','SIS','Available','—',''],
-  [43,'Darktrace','Roll-up','','Available','—',''],[44,'Darktrace','Back drop','','Available','—',''],[45,'Darktrace','Tablecloth','อยู่ในถุง Black drop','Available','—',''],
-  [46,'Extrahop','Roll-up','','Available','—',''],[47,'Extrahop','Roll-up','','Available','—',''],[48,'Extrahop','Other','ป้าย Data sheet','Available','—',''],[49,'Extrahop','Back drop','ไม่มีโครงเหล็ก','Available','—',''],[50,'Extrahop','Data sheet','A4 แนวตั้ง','Available','—',''],
-  [51,'Hillstone','Tablecloth','','Available','—',''],[52,'Hillstone','Roll-up','','Available','—',''],[53,'Hillstone','Roll-up','','Available','—',''],[54,'Hillstone','Roll-up','','Available','—',''],[55,'Hillstone','Roll-up','','Available','—',''],[56,'Hillstone','Premium','ถุงผ้า','Available','—',''],[57,'Hillstone','Premium','Cable','Available','—',''],[58,'Hillstone','Data sheet','','Available','—',''],
-  [59,'One trust','Roll-up','','Available','—',''],[60,'One trust','Roll-up','','Available','—',''],[61,'One trust','Back drop','','Available','—',''],
-  [62,'Orca','Data sheet','A4','Available','—',''],[63,'Orca','Roll-up','','Available','—',''],[64,'Orca','Roll-up','','Available','—',''],[65,'Orca','Back drop','','Available','—',''],[66,'Orca','Other','ตุ๊กตาเป่าลม สุดคิ้ว','Available','—',''],
-  [67,'Ridge','Roll-up','','Available','—',''],[68,'Ridge','Roll-up','','Available','—',''],
+  [43,'Darktrace','Roll-up','','Available','—',''],[44,'Darktrace','Back drop','','Available','—',''],[45,'Darktrace','Tablecloth','อยู่ใน Back drop','Available','—',''],
+  [46,'Extrahop','Roll-up','#1','Available','—',''],[47,'Extrahop','Roll-up','#2','Available','—',''],[48,'Extrahop','Other','ป้าย Data sheet','Available','—',''],[49,'Extrahop','Back drop','ไม่มีโครงเหล็ก','Available','—',''],[50,'Extrahop','Data sheet','A4 แนวตั้ง','Available','—',''],
+  [51,'Hillstone','Tablecloth','','Available','—',''],[52,'Hillstone','Roll-up','#1','Available','—',''],[53,'Hillstone','Roll-up','#2','Available','—',''],[54,'Hillstone','Roll-up','#3','Available','—',''],[55,'Hillstone','Roll-up','#4','Available','—',''],[56,'Hillstone','Premium','ถุงผ้า','Available','—',''],[57,'Hillstone','Premium','Cable','Available','—',''],[58,'Hillstone','Data sheet','','Available','—',''],
+  [59,'One trust','Roll-up','#1','Available','—',''],[60,'One trust','Roll-up','#2','Available','—',''],[61,'One trust','Back drop','','Available','—',''],
+  [62,'Orca','Data sheet','A4','Available','—',''],[63,'Orca','Roll-up','#1','Available','—',''],[64,'Orca','Roll-up','#2','Available','—',''],[65,'Orca','Back drop','','Available','—',''],[66,'Orca','Other','ตุ๊กตาเป่าลม','Available','—',''],
+  [67,'Ridge','Roll-up','#1','Available','—',''],[68,'Ridge','Roll-up','#2','Available','—',''],
   [69,'Sans','Roll-up','','Available','—',''],[70,'Sans','Data sheet','','Available','—',''],
   [71,'Security Scorecard','Back drop','','Available','—',''],[72,'Security Scorecard','Data sheet','','Available','—',''],[73,'Security Scorecard','Roll-up','','Available','—',''],
-  [74,'Sonicwall','Back drop','','Available','—',''],[75,'Sonicwall','Back drop','','Available','—',''],[76,'Sonicwall','Tablecloth','','Available','—',''],[77,'Sonicwall','Premium','สายชาจ','Available','—',''],[78,'Sonicwall','Roll-up','','Available','—',''],[79,'Sonicwall','Roll-up','','Available','—',''],[80,'Sonicwall','Roll-up','','Available','—',''],[81,'Sonicwall','Roll-up','','Available','—',''],[82,'Sonicwall','Data sheet','A4 แนวนอน','Available','—',''],[83,'Sonicwall','Premium','เสื้อโปโล สีดำ','Available','—',''],[84,'Sonicwall','Data sheet','ใบปลิว','Available','—',''],
+  [74,'Sonicwall','Back drop','#1','Available','—',''],[75,'Sonicwall','Back drop','#2','Available','—',''],[76,'Sonicwall','Tablecloth','','Available','—',''],[77,'Sonicwall','Premium','สายชาจ','Available','—',''],[78,'Sonicwall','Roll-up','#1','Available','—',''],[79,'Sonicwall','Roll-up','#2','Available','—',''],[80,'Sonicwall','Roll-up','#3','Available','—',''],[81,'Sonicwall','Roll-up','#4','Available','—',''],[82,'Sonicwall','Data sheet','A4 แนวนอน','Available','—',''],[83,'Sonicwall','Premium','เสื้อโปโล สีดำ','Available','—',''],[84,'Sonicwall','Data sheet','ใบปลิว','Available','—',''],
   [85,'Vicarius','Roll-up','','Available','—',''],
-  [86,'SendQuick','Roll-up','แบบผ้า #1','Available','—',''],[87,'SendQuick','Roll-up','แบบผ้า #2','Available','—',''],[88,'SendQuick','Back drop','ไม่ค่อยดี','Available','—',''],[89,'SendQuick','Roll-up','New #1','Available','—',''],[90,'SendQuick','Roll-up','New #2','Available','—',''],[91,'SendQuick','Back drop','New','Available','—',''],
+  [86,'SendQuick','Roll-up','แบบผ้า #1','Available','—',''],[87,'SendQuick','Roll-up','แบบผ้า #2','Available','—',''],[88,'SendQuick','Back drop','เก่า','Available','—',''],[89,'SendQuick','Roll-up','New #1','Available','—',''],[90,'SendQuick','Roll-up','New #2','Available','—',''],[91,'SendQuick','Back drop','New','Available','—',''],
   [92,'Soti','Roll-up','','Available','—',''],[93,'Soti','Back drop','','Available','—',''],[94,'Soti','Data sheet','','Available','—',''],
-  [95,'Radware','Back drop','','Available','—',''],[96,'Radware','Roll-up','','Available','—',''],[97,'Radware','Roll-up','','Available','—','']
+  [95,'Radware','Back drop','','Available','—',''],[96,'Radware','Roll-up','#1','Available','—',''],[97,'Radware','Roll-up','#2','Available','—','']
 ];
 
-let API_URL = localStorage.getItem('its_api_url') || '';
-let demoMode = false;
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let API = localStorage.getItem('its_api') || '';
+let isDemo = false;
 let items = [];
 let events = [];
 let nextId = 200;
 let sortBy = 'brand';
-let activeChip = 'All';
-let currentTab = 'inventory';
-let eventBrandFilter = 'All';
-let eventSelectedIds = new Set();
-let qrScanner = null;
-let scannedItemId = null;
+let filterChip = 'All';
+let evBrand = 'All';
+let evSelected = new Set();
+let currentTab = 'inv';
 let photoTargetId = null;
+let qrScanner = null;
+let scannedId = null;
+// Pending changes for item detail (only saved on Save button)
+let pendingItem = null;
 
-// ── SETUP ─────────────────────────────────────────────────────────────
-window.onload = function() {
-  if (API_URL) {
-    document.getElementById('api-url-input').value = API_URL;
-    connectAPI();
-  }
+// ═══════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════
+const em = c => CE[c]||'📦';
+const bg = c => CC[c]||'#f5f5f3';
+const brands = () => [...new Set(items.map(i=>i.brand))].sort();
+const today = () => new Date().toISOString().split('T')[0];
+const nowDate = () => new Date().toLocaleDateString('th-TH');
+function toast(msg, dur=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  setTimeout(() => t.classList.remove('on'), dur);
+}
+function loader(show, msg='') {
+  const l = document.getElementById('loader');
+  if (show) { document.getElementById('loader-txt').textContent = msg||'Loading...'; l.classList.add('on'); }
+  else l.classList.remove('on');
+}
+function setSyncDot(s) { document.getElementById('sdot').className = 'sdot ' + s; }
+function mkItem(r) {
+  let contains=[],history=[];
+  try{contains=JSON.parse(r.contains||'[]');}catch(e){}
+  try{history=JSON.parse(r.history||'[]');}catch(e){}
+  return {id:Number(r[0]||r.id)||0,brand:r[1]||r.brand||'',cat:r[2]||r.cat||'',desc:r[3]||r.desc||'',status:r[4]||r.status||'Available',loc:r[5]||r.loc||'—',barcode:r[6]||r.barcode||'',photo:r.photo||'',contains,history};
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SETUP & API
+// ═══════════════════════════════════════════════════════════════
+window.onload = () => {
+  if (API) { document.getElementById('api-input').value = API; connectAPI(); }
 };
 
 async function connectAPI() {
-  const url = document.getElementById('api-url-input').value.trim();
-  if (!url || !url.startsWith('https://script.google.com')) {
-    toast('Please paste a valid Google Apps Script URL'); return;
-  }
-  API_URL = url;
-  localStorage.setItem('its_api_url', API_URL);
-
-  const MAX_RETRIES = 5;
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    showLoading(attempt === 1 ? 'Connecting...' : 'Retrying... (' + attempt + '/' + MAX_RETRIES + ')');
+  const url = document.getElementById('api-input').value.trim();
+  if (!url.startsWith('https://script.google.com')) { showErr('Please paste a valid Apps Script URL'); return; }
+  API = url; localStorage.setItem('its_api', API);
+  loader(true, 'Connecting...');
+  hideErr();
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    loader(true, attempt===1 ? 'Connecting...' : `Retrying ${attempt}/5...`);
     try {
-      await apiCall('ping');
-      const res = await apiCall('getItems');
-      if (res.error) throw new Error(res.error);
-      items = res.items.map(normalizeItem);
-      if (items.length === 0) {
-        showLoading('First time — loading your data...');
-        items = SEED.map(r => ({id:r[0],brand:r[1],cat:r[2],desc:r[3],status:r[4],loc:r[5],barcode:r[6],photo:''}));
-        for (const item of items) await apiCall('saveItem', item);
+      await jcall('ping');
+      loader(true, 'Loading items...');
+      const res = await jcall('getItems');
+      items = (res.items||[]).map(mkItem);
+      if (!items.length) {
+        loader(true, 'First time setup...');
+        items = SEED.map(r => mkItem({id:r[0],brand:r[1],cat:r[2],desc:r[3],status:r[4],loc:r[5],barcode:r[6],photo:'',contains:'[]',history:'[]'}));
+        for (const it of items) await jcall('saveItem', it);
       }
-      const evRes = await apiCall('getEvents');
-      events = evRes.events || [];
-      nextId = items.length ? Math.max(...items.map(i => Number(i.id))) + 1 : 1;
       loadPhotos();
-      hideLoading();
-      document.getElementById('setup-screen').style.display = 'none';
-      setSyncStatus('ok');
-      buildChips(); renderInventory(); renderBanners();
+      loader(true, 'Loading events...');
+      const er = await jcall('getEvents');
+      events = er.events||[];
+      nextId = items.length ? Math.max(...items.map(i=>i.id))+1 : 200;
+      loader(false);
+      document.getElementById('setup').style.display = 'none';
+      setSyncDot('ok');
+      initApp();
       return;
     } catch(e) {
-      if (attempt < MAX_RETRIES) {
-        await new Promise(r => setTimeout(r, 2000));
+      if (attempt===5) {
+        loader(false);
+        showErr('Connection failed: ' + e.message + '<br><br><b>Fixes:</b><br>1. Redeploy as new deployment<br>2. Access = Anyone<br>3. Use /exec URL not /dev');
       } else {
-        hideLoading();
-        setSyncStatus('err');
-        document.querySelectorAll('.connect-error').forEach(el => el.remove());
-        const errDiv = document.createElement('div');
-        errDiv.className = 'connect-error';
-        errDiv.style.cssText = 'background:#fcebeb;border:1px solid #f5b5b5;border-radius:10px;padding:12px 14px;margin-top:12px;font-size:12px;color:#A32D2D;text-align:left';
-        errDiv.innerHTML = '<strong>Connection failed after 5 attempts</strong><br><br>' + (e.message||'Unknown error') +
-          '<br><br><strong>Common fixes:</strong><br>' +
-          '1. Redeploy as a <strong>new deployment</strong><br>' +
-          '2. Access set to <strong>Anyone</strong><br>' +
-          '3. Use the /exec URL not /dev URL';
-        document.getElementById('setup-screen').appendChild(errDiv);
+        await new Promise(r=>setTimeout(r,2000));
       }
     }
   }
 }
 
-function useDemoMode() {
-  demoMode = true;
-  items = SEED.map(r => ({id:r[0],brand:r[1],cat:r[2],desc:r[3],status:r[4],loc:r[5],barcode:r[6],photo:''}));
-  events = JSON.parse(localStorage.getItem('its_events_demo') || '[]');
-  nextId = 200;
+function demoMode() {
+  isDemo = true;
+  items = SEED.map(r => mkItem({id:r[0],brand:r[1],cat:r[2],desc:r[3],status:r[4],loc:r[5],barcode:r[6],photo:'',contains:'[]',history:'[]'}));
+  const sv = localStorage.getItem('its_demo_items');
+  if (sv) items = JSON.parse(sv).map(mkItem);
+  events = JSON.parse(localStorage.getItem('its_demo_events')||'[]');
   loadPhotos();
-  document.getElementById('setup-screen').style.display = 'none';
-  setSyncStatus('ok');
-  buildChips(); renderInventory(); renderBanners();
-  toast('Demo mode — data saves in this browser only');
+  nextId = items.length ? Math.max(...items.map(i=>i.id))+1 : 200;
+  document.getElementById('setup').style.display = 'none';
+  setSyncDot('ok');
+  initApp();
+  toast('Demo mode — data saved on this device');
 }
 
-function normalizeItem(i) {
-  let contains = [];
-  let history = [];
-  try { contains = JSON.parse(i.contains||'[]'); } catch(e) {}
-  try { history = JSON.parse(i.history||'[]'); } catch(e) {}
-  return { id: Number(i.id)||0, brand:i.brand||'', cat:i.cat||'', desc:i.desc||'', status:i.status||'Available', loc:i.loc||'—', barcode:i.barcode||'', photo:i.photo||'', contains, history };
+function saveDemo() {
+  if (!isDemo) return;
+  localStorage.setItem('its_demo_items', JSON.stringify(items));
+  localStorage.setItem('its_demo_events', JSON.stringify(events));
 }
 
-// ── API ───────────────────────────────────────────────────────────────
-// Uses JSONP to call Google Apps Script — no CORS issues from local files
-function apiCall(action, data) {
-  if (demoMode) return Promise.resolve(localAction(action, data));
+// JSONP for GET requests
+function jcall(action, data) {
+  if (isDemo) return Promise.resolve(localCall(action, data));
   return new Promise((resolve, reject) => {
-    const cbName = '_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
-    const timeout = setTimeout(() => {
-      delete window[cbName];
-      const script = document.getElementById(cbName);
-      if (script) script.remove();
-      reject(new Error('Request timed out (30s). Check your Apps Script URL.'));
-    }, 30000);
-
-    window[cbName] = function(result) {
-      clearTimeout(timeout);
-      delete window[cbName];
-      const script = document.getElementById(cbName);
-      if (script) script.remove();
-      if (result.error) reject(new Error(result.error));
-      else resolve(result);
-    };
-
-    const params = new URLSearchParams({ action, callback: cbName });
-    if (data) params.append('data', JSON.stringify(data));
-    const script = document.createElement('script');
-    script.id = cbName;
-    script.src = API_URL + '?' + params.toString();
-    script.onerror = () => {
-      clearTimeout(timeout);
-      delete window[cbName];
-      reject(new Error('Script load failed. Check the URL and redeploy.'));
-    };
-    document.head.appendChild(script);
+    const cb = '_cb' + Date.now() + Math.random().toString(36).slice(2);
+    const t = setTimeout(() => { cleanup(); reject(new Error('Timeout after 30s')); }, 30000);
+    window[cb] = r => { cleanup(); r.error ? reject(new Error(r.error)) : resolve(r); };
+    const p = new URLSearchParams({action, callback:cb});
+    if (data) p.append('data', JSON.stringify(data));
+    const s = document.createElement('script');
+    s.id = cb; s.src = API + '?' + p;
+    s.onerror = () => { cleanup(); reject(new Error('Script load failed — check URL and redeploy')); };
+    document.head.appendChild(s);
+    function cleanup() { clearTimeout(t); delete window[cb]; document.getElementById(cb)?.remove(); }
   });
 }
 
-function localAction(action, data) {
-  if (action === 'getItems') return { items: JSON.parse(localStorage.getItem('its_items_demo') || 'null') || [] };
-  if (action === 'getEvents') return { events: JSON.parse(localStorage.getItem('its_events_demo') || '[]') };
-  if (action === 'saveItem' || action === 'updateItem') {
-    const stored = JSON.parse(localStorage.getItem('its_items_demo') || '[]');
-    const idx = stored.findIndex(i => String(i.id) === String(data.id));
-    if (idx >= 0) stored[idx] = data; else stored.push(data);
-    localStorage.setItem('its_items_demo', JSON.stringify(stored));
-    return { ok: true };
-  }
-  if (action === 'saveEvent' || action === 'updateEvent') {
-    const stored = JSON.parse(localStorage.getItem('its_events_demo') || '[]');
-    const idx = stored.findIndex(e => String(e.id) === String(data.id));
-    if (idx >= 0) stored[idx] = data; else stored.push(data);
-    localStorage.setItem('its_events_demo', JSON.stringify(stored));
-    return { ok: true };
-  }
-  if (action === 'bulkUpdate') {
-    const stored = JSON.parse(localStorage.getItem('its_items_demo') || '[]');
-    data.items.forEach(u => { const idx = stored.findIndex(i => String(i.id)===String(u.id)); if(idx>=0) stored[idx].status=u.status; });
-    localStorage.setItem('its_items_demo', JSON.stringify(stored));
-    return { ok: true };
-  }
-  return { ok: true };
+function localCall(action, data) {
+  if (action==='getItems') return {items:[]};
+  if (action==='getEvents') return {events:[]};
+  return {ok:true};
 }
 
-// ── SYNC STATUS ───────────────────────────────────────────────────────
-function setSyncStatus(s) {
-  const d = document.getElementById('sync-dot');
-  d.className = 'sync-dot ' + s;
-}
-function showLoading(msg) {
-  document.getElementById('loading-msg').textContent = msg || 'Syncing...';
-  document.getElementById('loading').classList.add('show');
-}
-function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+function showErr(msg) { const e=document.getElementById('setup-err'); e.innerHTML=msg; e.style.display='block'; }
+function hideErr() { document.getElementById('setup-err').style.display='none'; }
 
-// ── UTILS ─────────────────────────────────────────────────────────────
-function brands() { return [...new Set(items.map(i => i.brand))].sort(); }
-function emoj(cat) { return CE[cat] || '📦'; }
-function bgc(cat) { return CC[cat] || '#f5f5f3'; }
-function toast(msg) { const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2600); }
-function today() { return new Date().toISOString().split('T')[0]; }
+// ═══════════════════════════════════════════════════════════════
+// SYNC
+// ═══════════════════════════════════════════════════════════════
+async function syncItem(item) {
+  const payload = {...item, contains:JSON.stringify(item.contains||[]), history:JSON.stringify(item.history||[])};
+  setSyncDot('syncing');
+  try { await jcall('updateItem', payload); setSyncDot('ok'); saveDemo(); }
+  catch(e) { setSyncDot('err'); toast('Sync failed'); }
+}
+async function syncNewItem(item) {
+  const payload = {...item, contains:JSON.stringify(item.contains||[]), history:JSON.stringify(item.history||[])};
+  setSyncDot('syncing');
+  try { await jcall('saveItem', payload); setSyncDot('ok'); saveDemo(); }
+  catch(e) { setSyncDot('err'); toast('Sync failed'); }
+}
+async function syncBulk(updates) {
+  setSyncDot('syncing');
+  try { await jcall('bulkUpdate', {items:updates}); setSyncDot('ok'); saveDemo(); }
+  catch(e) { setSyncDot('err'); }
+}
+async function syncEvent(ev, isNew) {
+  setSyncDot('syncing');
+  const payload = {...ev, itemIds:JSON.stringify(ev.itemIds)};
+  try { await jcall(isNew?'saveEvent':'updateEvent', payload); setSyncDot('ok'); saveDemo(); }
+  catch(e) { setSyncDot('err'); }
+}
 
-// ── TABS ──────────────────────────────────────────────────────────────
-function switchTab(tab) {
+// ═══════════════════════════════════════════════════════════════
+// INIT & TABS
+// ═══════════════════════════════════════════════════════════════
+function initApp() {
+  document.querySelectorAll('.tab').forEach(t => t.onclick = () => switchTo(t.dataset.tab));
+  buildChips(); renderInv(); renderBanners();
+}
+
+function switchTo(tab) {
   currentTab = tab;
-  ['inventory','events','scan','excel','stats'].forEach(t => {
-    const tabEl = document.getElementById('tab-'+t);
-    if (tabEl) tabEl.classList.toggle('active', t===tab);
-    const viewEl = document.getElementById('view-'+t);
-    if (viewEl) viewEl.style.display = t===tab ? '' : 'none';
-  });
-  document.getElementById('inv-controls').style.display = tab==='inventory' ? '' : 'none';
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
+  document.querySelectorAll('.view,.scan-view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-'+tab)?.classList.add('active');
+  document.getElementById('inv-ctrl').style.display = tab==='inv' ? '' : 'none';
   if (tab==='scan') initScanner(); else stopScanner();
   if (tab==='excel') renderExcel();
   if (tab==='stats') renderStats();
   if (tab==='events') renderEventsTab();
 }
 
-// ── INVENTORY ─────────────────────────────────────────────────────────
-function buildChips() {
-  const chips = ['All','Available','In use','By Brand','By Category'];
-  document.getElementById('chips').innerHTML = chips.map(c =>
-    `<div class="chip${c===activeChip?' active':''}" onclick="setChip('${c}')">${c}</div>`).join('');
-}
-function setChip(c) { activeChip=c; if(c==='By Brand') sortBy='brand'; else if(c==='By Category') sortBy='category'; buildChips(); renderInventory(); }
-function setSort(s) {
-  sortBy=s;
-  ['brand','category','location','status'].forEach(k => document.getElementById('so-'+k).classList.toggle('active',k===s));
-  closeAll(); renderInventory();
+// ═══════════════════════════════════════════════════════════════
+// SHEETS
+// ═══════════════════════════════════════════════════════════════
+function openSheet(id) {
+  closeSheets();
+  document.getElementById('overlay').classList.add('on');
+  document.getElementById(id).classList.add('on');
+  // Pre-fill event sheet dates
+  if (id==='ev-sheet') {
+    document.getElementById('ev-start').value = today();
+    document.getElementById('ev-end').value = today();
+    evBrand='All'; evSelected=new Set();
+    buildEvBrands(); renderEvItems();
+  }
+  if (id==='new-sheet') {
+    document.getElementById('brand-dl').innerHTML = brands().map(b=>`<option value="${b}">`).join('');
+    ['n-brand','n-cat','n-desc','n-loc','n-barcode'].forEach(x=>{const el=document.getElementById(x);if(el)el.value='';});
+  }
 }
 
-function renderInventory() {
+function closeSheets() {
+  document.getElementById('overlay').classList.remove('on');
+  document.querySelectorAll('.sheet').forEach(s => s.classList.remove('on'));
+  pendingItem = null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INVENTORY
+// ═══════════════════════════════════════════════════════════════
+function buildChips() {
+  document.getElementById('chips').innerHTML = ['All','Available','In use','By Brand','By Category'].map(c =>
+    `<div class="chip${c===filterChip?' on':''}" onclick="setChip('${c}')">${c}</div>`).join('');
+}
+function setChip(c) {
+  filterChip=c;
+  if(c==='By Brand') sortBy='brand';
+  if(c==='By Category') sortBy='category';
+  buildChips(); renderInv();
+}
+function setSort(s) {
+  sortBy=s;
+  ['brand','category','location','status'].forEach(k=>document.getElementById('so-'+k)?.classList.toggle('on',k===s));
+  closeSheets(); renderInv();
+}
+
+function renderInv() {
   const q = document.getElementById('srch').value.toLowerCase();
   let list = items.filter(i => {
-    if (activeChip==='Available' && i.status!=='Available') return false;
-    if (activeChip==='In use' && i.status!=='In use at event') return false;
-    if (q && !(i.brand.toLowerCase().includes(q) || i.cat.toLowerCase().includes(q) || (i.desc||'').toLowerCase().includes(q))) return false;
+    if (filterChip==='Available' && i.status!=='Available') return false;
+    if (filterChip==='In use' && i.status!=='In use at event') return false;
+    if (q && !(i.brand.toLowerCase().includes(q)||i.cat.toLowerCase().includes(q)||(i.desc||'').toLowerCase().includes(q))) return false;
     return true;
   });
   const groups = {};
   list.forEach(i => {
-    const k = sortBy==='brand'?i.brand : sortBy==='category'?i.cat : sortBy==='location'?(i.loc||'—') : i.status;
+    const k = sortBy==='brand'?i.brand:sortBy==='category'?i.cat:sortBy==='location'?(i.loc||'—'):i.status;
     if (!groups[k]) groups[k]=[];
     groups[k].push(i);
   });
@@ -588,669 +624,539 @@ function renderInventory() {
   keys.forEach(k => {
     html += `<div class="gh">${k} <span style="opacity:.5;font-weight:400">(${groups[k].length})</span></div>`;
     groups[k].forEach(i => {
-      const pill = i.status==='Available'?'sa':'si';
+      const pill = i.status==='Available'?'pill-av':'pill-in';
       const plabel = i.status==='Available'?'Available':'In use';
-      const top = sortBy==='brand' ? i.cat+(i.desc?' · '+i.desc:'') : i.brand+(i.desc?' · '+i.desc:'');
-      const sub = sortBy==='brand' ? i.brand : i.cat;
+      const top = sortBy==='brand'?i.cat+(i.desc?' · '+i.desc:''):i.brand+(i.desc?' · '+i.desc:'');
+      const sub = sortBy==='brand'?i.brand:i.cat;
       const thumb = i.photo
-        ? `<img src="${i.photo}" style="width:34px;height:34px;border-radius:8px;object-fit:cover;flex-shrink:0">`
-        : `<div class="cdot" style="background:${bgc(i.cat)}">${emoj(i.cat)}</div>`;
+        ? `<img src="${i.photo}" class="ithumb" style="object-fit:cover">`
+        : `<div class="ithumb" style="background:${bg(i.cat)}">${em(i.cat)}</div>`;
+      const bagIcon = (i.contains||[]).length ? ' 👜' : '';
       html += `<div class="irow" onclick="openItemDetail(${i.id})">
         ${thumb}
-        <div class="imain"><div class="iname">${top}</div><div class="isub">${sub}${i.loc&&i.loc!=='—'?' · 📍'+i.loc:''}</div></div>
-        <div class="iright"><span class="sp ${pill}">${plabel}</span>${i.barcode?`<span class="loc-tag">${String(i.barcode).slice(-6)}</span>`:''}</div>
+        <div class="imain">
+          <div class="iname">${top}${bagIcon}</div>
+          <div class="isub">${sub}${i.loc&&i.loc!=='—'?' · 📍'+i.loc:''}</div>
+        </div>
+        <div class="iright">
+          <span class="pill ${pill}">${plabel}</span>
+          ${i.barcode?`<span class="mono">${String(i.barcode).slice(-6)}</span>`:''}
+        </div>
       </div>`;
     });
   });
-  document.getElementById('view-inventory').innerHTML = html;
+  document.getElementById('view-inv').innerHTML = html;
   buildChips();
 }
 
-// ── ITEM DETAIL ───────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// ITEM DETAIL — with editable fields, contains, history
+// ═══════════════════════════════════════════════════════════════
 function openItemDetail(id) {
-  const i = items.find(x => x.id==id); if (!i) return;
-  if (!i.contains) i.contains = [];
-  if (!i.history) i.history = [];
-  const avA = i.status==='Available' ? 'active-avail' : '';
-  const inA = i.status==='In use at event' ? 'active-inuse' : '';
+  const i = items.find(x=>x.id==id); if (!i) return;
+  // Make a pending copy — only saved when user taps Save
+  pendingItem = JSON.parse(JSON.stringify(i));
+  renderItemDetail();
+  document.getElementById('overlay').classList.add('on');
+  document.getElementById('item-sheet').classList.add('on');
+}
 
-  const photoBlock = i.photo
-    ? `<div style="position:relative;margin-bottom:12px">
+function renderItemDetail() {
+  const i = pendingItem; if (!i) return;
+  const avA = i.status==='Available'?'stog-av':'';
+  const inA = i.status==='In use at event'?'stog-in':'';
+
+  // Photo block
+  const photoHtml = i.photo
+    ? `<div style="position:relative;margin-bottom:10px">
         <img src="${i.photo}" style="width:100%;border-radius:10px;max-height:200px;object-fit:cover;display:block">
         <div style="display:flex;gap:6px;margin-top:6px">
-          <button onclick="triggerPhoto(${i.id})" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);font-size:12px;cursor:pointer;font-family:inherit">📷 Replace</button>
-          <button onclick="removePhoto(${i.id})" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);font-size:12px;cursor:pointer;font-family:inherit;color:#A32D2D">✕ Remove</button>
+          <button onclick="photoTargetId=${i.id};document.getElementById('file-photo').click()" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);font-size:12px;cursor:pointer;font-family:inherit">📷 Replace</button>
+          <button onclick="pendingItem.photo='';renderItemDetail()" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);font-size:12px;cursor:pointer;font-family:inherit;color:var(--red)">✕ Remove</button>
         </div>
       </div>`
-    : `<div class="photo-box" onclick="triggerPhoto(${i.id})">
+    : `<div class="photo-box" onclick="photoTargetId=${i.id};document.getElementById('file-photo').click()">
         <div style="font-size:32px;margin-bottom:6px">📷</div>
         <div style="font-size:12px;font-weight:500;color:var(--text2)">Add photo</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px">Take photo or choose from library</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Camera or library</div>
       </div>`;
 
   // Contains block
-  const containsBlock = `
-    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;margin-top:14px;text-transform:uppercase;letter-spacing:.06em">📦 Also in this bag</div>
-    <div id="contains-list">
-      ${(i.contains||[]).length===0
-        ? '<div style="font-size:12px;color:var(--text3);padding:6px 0">Nothing added yet</div>'
-        : (i.contains||[]).map((c,idx) => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
-            <span style="font-size:14px">${emoj(c.cat||'Other')}</span>
-            <div style="flex:1"><div style="font-size:12px;font-weight:500">${c.brand||''} — ${c.cat||''}</div><div style="font-size:10px;color:var(--text2)">${c.desc||''}</div></div>
-            <button onclick="removeContains(${i.id},${idx})" style="background:none;border:none;color:#A32D2D;font-size:14px;cursor:pointer">✕</button>
-          </div>`).join('')
-      }
-    </div>
+  const cont = i.contains||[];
+  const containsHtml = `
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.06em">👜 Also in this bag</div>
+    ${cont.length===0
+      ? '<div style="font-size:12px;color:var(--text3);padding:4px 0 8px">Nothing added yet</div>'
+      : cont.map((c,idx)=>`<div class="contains-row" onclick="openItemDetail(${c.id})">
+          <span style="font-size:16px">${em(c.cat)}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.brand} — ${c.cat}${c.desc?' · '+c.desc:''}</div>
+            <div style="font-size:10px;color:var(--blue)">→ tap to open this item</div>
+          </div>
+          <button onclick="event.stopPropagation();pendingItem.contains.splice(${idx},1);renderItemDetail()" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:4px">✕</button>
+        </div>`).join('')
+    }
     <div style="display:flex;gap:6px;margin-top:8px">
-      <select class="fselect" id="contains-item-sel" style="flex:1;font-size:12px;padding:7px 8px">
-        <option value="">+ Add item that's in this bag...</option>
-        ${items.filter(x=>x.id!=i.id).map(x=>`<option value="${x.id}">${x.brand} — ${x.cat}${x.desc?' ('+x.desc+')':''}</option>`).join('')}
+      <select class="fselect" id="cont-sel" style="flex:1;font-size:12px;padding:7px 8px">
+        <option value="">+ Add item to this bag...</option>
+        ${items.filter(x=>x.id!=i.id&&!cont.find(c=>c.id==x.id)).map(x=>`<option value="${x.id}">${x.brand} — ${x.cat}${x.desc?' ('+x.desc+')':''}</option>`).join('')}
       </select>
-      <button onclick="addContains(${i.id})" style="background:#111;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;font-family:inherit">Add</button>
+      <button onclick="addContains()" style="background:#111;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;font-family:inherit">Add</button>
     </div>`;
 
+  // "Inside" block — show which bags contain this item
+  const insideOf = items.filter(x => (x.contains||[]).find(c=>c.id==i.id));
+  const insideHtml = insideOf.length ? `
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.06em">📦 Inside</div>
+    ${insideOf.map(p=>`<div class="contains-row" onclick="closeSheets();setTimeout(()=>openItemDetail(${p.id}),50)">
+        <span style="font-size:16px">${em(p.cat)}</span>
+        <div style="flex:1"><div style="font-size:12px;font-weight:500">${p.brand} — ${p.cat}${p.desc?' · '+p.desc:''}</div><div style="font-size:10px;color:var(--blue)">This item is inside this bag → tap to open</div></div>
+        <span style="color:var(--blue);font-size:16px">›</span>
+      </div>`).join('')}` : '';
+
   // History block
-  const histBlock = `
-    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;margin-top:14px;text-transform:uppercase;letter-spacing:.06em">🕐 History</div>
-    ${(i.history||[]).length===0
-      ? '<div style="font-size:12px;color:var(--text3);padding:6px 0">No history yet</div>'
-      : [...(i.history||[])].reverse().map(h=>`<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
-          <span style="flex-shrink:0;color:var(--text3);font-size:10px;padding-top:2px;min-width:80px">${h.date||''}</span>
-          <div style="flex:1;color:var(--text)">${h.note||''}</div>
+  const hist = [...(i.history||[])].reverse();
+  const histHtml = `
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.06em">🕐 History</div>
+    ${hist.length===0
+      ? '<div style="font-size:12px;color:var(--text3);padding:4px 0">No history yet</div>'
+      : hist.map(h=>`<div class="hist-row">
+          <div style="font-size:10px;color:var(--text3);min-width:80px;padding-top:1px">${h.date}</div>
+          <div style="color:var(--text)">${h.note}</div>
         </div>`).join('')
     }`;
 
   document.getElementById('item-content').innerHTML = `
-    <div class="sh-title"><span style="font-size:26px">${emoj(i.cat)}</span><div style="flex:1"><div>${i.brand}</div><div style="font-size:12px;font-weight:400;color:var(--text2)">${i.cat}${i.desc?' · '+i.desc:''}</div></div></div>
-    ${photoBlock}
-    <div style="font-size:11px;font-weight:500;color:var(--text2);margin-bottom:4px">Brand</div>
-    <input class="finput" id="edit-brand" value="${i.brand}" placeholder="Brand...">
-    <div style="font-size:11px;font-weight:500;color:var(--text2);margin-top:10px;margin-bottom:4px">Description</div>
-    <input class="finput" id="edit-desc" value="${i.desc||''}" placeholder="Description...">
-    <div style="font-size:11px;font-weight:500;color:var(--text2);margin-top:10px;margin-bottom:4px">Location</div>
-    <input class="finput" id="edit-loc" value="${i.loc==='—'?'':i.loc}" placeholder="Add location...">
-    <div style="font-size:11px;font-weight:500;color:var(--text2);margin-top:10px;margin-bottom:6px">Status</div>
-    <div class="status-toggle">
-      <button class="stog ${avA}" onclick="setItemStatus(${i.id},'Available')">✓ Available</button>
-      <button class="stog ${inA}" onclick="setItemStatus(${i.id},'In use at event')">⚡ In use</button>
+    <div class="mh"></div>
+    <div class="sh-title" style="gap:10px">
+      <span style="font-size:28px">${em(i.cat)}</span>
+      <div><div>${i.brand}</div><div style="font-size:12px;font-weight:400;color:var(--text2)">${i.cat}${i.desc?' · '+i.desc:''}</div></div>
     </div>
-    ${containsBlock}
-    ${histBlock}
-    <button class="btn-primary" onclick="saveItemDetail(${i.id})">✔ Save changes</button>
-    <button class="btn-secondary" onclick="closeAll()">Close</button>
+    ${photoHtml}
+    <div class="flabel">Brand</div>
+    <input class="finput" id="d-brand" value="${i.brand}" placeholder="Brand" oninput="pendingItem.brand=this.value">
+    <div class="flabel">Description</div>
+    <input class="finput" id="d-desc" value="${i.desc||''}" placeholder="Description" oninput="pendingItem.desc=this.value">
+    <div class="flabel">Location</div>
+    <input class="finput" id="d-loc" value="${i.loc==='—'?'':i.loc}" placeholder="Location" oninput="pendingItem.loc=this.value||'—'">
+    <div class="flabel">Status</div>
+    <div class="stog">
+      <button class="stog-btn ${avA}" onclick="setDetailStatus('Available')">✓ Available</button>
+      <button class="stog-btn ${inA}" onclick="setDetailStatus('In use at event')">⚡ In use</button>
+    </div>
+    ${containsHtml}
+    ${insideHtml}
+    ${histHtml}
   `;
-  openSheet('item-sheet');
+  document.getElementById('item-foot').innerHTML = `
+    <button class="btn-p" onclick="saveItemDetail()">✔ Save changes</button>
+    <button class="btn-s" onclick="closeSheets()">Cancel</button>
+  `;
 }
 
-function addContains(itemId) {
-  const sel = document.getElementById('contains-item-sel');
-  const refId = Number(sel.value);
-  if (!refId) { toast('Select an item first'); return; }
-  const parent = items.find(x => x.id==itemId);
-  const child = items.find(x => x.id==refId);
-  if (!parent || !child) return;
-  if (!parent.contains) parent.contains = [];
-  if (parent.contains.find(c => c.id==refId)) { toast('Already added'); return; }
-  parent.contains.push({id: child.id, brand: child.brand, cat: child.cat, desc: child.desc});
-  syncItem(parent);
-  openItemDetail(itemId);
-  toast('Item added to bag ✓');
+function setDetailStatus(status) {
+  if (!pendingItem) return;
+  pendingItem.status = status;
+  renderItemDetail();
 }
 
-function removeContains(itemId, idx) {
-  const parent = items.find(x => x.id==itemId);
-  if (!parent) return;
-  parent.contains.splice(idx, 1);
-  syncItem(parent);
-  openItemDetail(itemId);
+function addContains() {
+  const sel = document.getElementById('cont-sel');
+  const refId = Number(sel.value); if (!refId) { toast('Select an item first'); return; }
+  const child = items.find(x=>x.id==refId); if (!child) return;
+  if (!pendingItem.contains) pendingItem.contains=[];
+  pendingItem.contains.push({id:child.id,brand:child.brand,cat:child.cat,desc:child.desc});
+  renderItemDetail();
 }
 
-function triggerPhoto(id) {
-  photoTargetId = id;
-  // Allow both camera and library
-  const inp = document.getElementById('file-photo');
-  inp.removeAttribute('capture'); // removing capture allows choosing camera OR library
-  inp.click();
-}
-
-function handlePhotoFile(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const item = items.find(x => x.id==photoTargetId);
-  if (!item) return;
-
-  const reader = new FileReader();
-  reader.onload = function(ev) {
-    const img = new Image();
-    img.onload = function() {
-      // Resize to max 800px
-      const MAX = 800;
-      let w=img.width, h=img.height;
-      if (w>MAX||h>MAX) { if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
-      const canvas = document.createElement('canvas');
-      canvas.width=w; canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      const base64 = canvas.toDataURL('image/jpeg', 0.80);
-
-      // Show preview immediately (local)
-      item.photo = base64;
-      openItemDetail(photoTargetId);
-      renderInventory();
-
-      if (demoMode) {
-        // Demo: store in localStorage
-        try {
-          const photos = JSON.parse(localStorage.getItem('its_photos') || '{}');
-          photos[item.id] = base64;
-          localStorage.setItem('its_photos', JSON.stringify(photos));
-        } catch(err) {}
-        toast('Photo saved ✓');
-        return;
-      }
-
-      // Upload to Google Drive via Apps Script
-      toast('Uploading to Google Drive...');
-      setSyncStatus('syncing');
-      uploadPhotoToDrive(item.id, base64);
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-  e.target.value = '';
-}
-
-async function uploadPhotoToDrive(itemId, base64) {
-  // Upload to imgbb — works from any browser, no CORS issues
-  const IMGBB_KEY = 'fb854adbba2f1ff81b0f12cd13d973c3';
-  try {
-    toast('Uploading photo...');
-    setSyncStatus('syncing');
-
-    // Strip data:image/jpeg;base64, prefix for imgbb
-    const base64data = base64.replace(/^data:image\/\w+;base64,/, '');
-
-    const formData = new FormData();
-    formData.append('key', IMGBB_KEY);
-    formData.append('image', base64data);
-    formData.append('name', 'item_' + itemId);
-
-    const res = await fetch('https://api.imgbb.com/1/upload', {
-      method: 'POST',
-      body: formData
-    });
-    const result = await res.json();
-
-    if (result.success) {
-      const url = result.data.display_url;
-      const item = items.find(x => x.id==itemId);
-      if (item) {
-        item.photo = url;
-        // Cache locally
-        try {
-          const photos = JSON.parse(localStorage.getItem('its_photos') || '{}');
-          photos[itemId] = url;
-          localStorage.setItem('its_photos', JSON.stringify(photos));
-        } catch(e) {}
-        // Save URL to Google Sheets
-        await syncItem(item);
-        openItemDetail(itemId);
-        renderInventory();
-      }
-      setSyncStatus('ok');
-      toast('Photo uploaded ✓ synced to all devices!');
-      return url;
-    } else {
-      throw new Error(result.error?.message || 'imgbb upload failed');
-    }
-  } catch(err) {
-    console.error('Photo upload failed:', err);
-    // Keep local preview anyway
-    try {
-      const photos = JSON.parse(localStorage.getItem('its_photos') || '{}');
-      const item = items.find(x => x.id==itemId);
-      if (item) photos[itemId] = item.photo;
-      localStorage.setItem('its_photos', JSON.stringify(photos));
-    } catch(e) {}
-    setSyncStatus('err');
-    toast('Upload failed — photo saved on this device only');
-  }
-}
-
-function loadPhotos() {
-  try {
-    const photos = JSON.parse(localStorage.getItem('its_photos') || '{}');
-    items.forEach(i => {
-      if (!i.photo && photos[i.id]) i.photo = photos[i.id];
-    });
-  } catch(e) {}
-}
-
-function removePhoto(id) {
-  const i = items.find(x => x.id==id); if (!i) return;
-  i.photo = ''; syncItem(i); openItemDetail(id); toast('Photo removed');
-}
-
-async function setItemStatus(id, status) {
-  const i = items.find(x => x.id==id); if (!i) return;
-  const oldStatus = i.status;
-  if (oldStatus === status) return;
-  if (!i.history) i.history = [];
-  i.history.push({ date: new Date().toLocaleDateString('th-TH'), note: (status==='Available'?'✅':'⚡') + ' Status: ' + oldStatus + ' → ' + status });
-  i.status = status;
-  await syncItem(i);
-  openItemDetail(id); renderInventory(); renderBanners();
-}
-
-async function saveItemDetail(id) {
-  const i = items.find(x => x.id==id); if (!i) return;
-  const newLoc = document.getElementById('edit-loc').value.trim() || '—';
-  const newDesc = document.getElementById('edit-desc').value.trim();
-  const newBrand = document.getElementById('edit-brand').value.trim() || i.brand;
-  // Track what changed in history
-  if (!i.history) i.history = [];
+async function saveItemDetail() {
+  if (!pendingItem) return;
+  const orig = items.find(x=>x.id==pendingItem.id); if (!orig) return;
+  // Build history entries for what changed
   const changes = [];
-  if (newLoc !== i.loc) changes.push('Location: ' + i.loc + ' → ' + newLoc);
-  if (newDesc !== (i.desc||'')) changes.push('Description: "' + (i.desc||'') + '" → "' + newDesc + '"');
-  if (newBrand !== i.brand) changes.push('Brand: ' + i.brand + ' → ' + newBrand);
+  if (pendingItem.status !== orig.status) changes.push((pendingItem.status==='Available'?'✅':'⚡')+' Status: '+orig.status+' → '+pendingItem.status);
+  if ((pendingItem.loc||'—') !== (orig.loc||'—')) changes.push('📍 Location: '+(orig.loc||'—')+' → '+(pendingItem.loc||'—'));
+  if ((pendingItem.desc||'') !== (orig.desc||'')) changes.push('✏️ Description: "'+(orig.desc||'')+'" → "'+(pendingItem.desc||'')+'"');
+  if (pendingItem.brand !== orig.brand) changes.push('✏️ Brand: '+orig.brand+' → '+pendingItem.brand);
+  const newContLen = (pendingItem.contains||[]).length;
+  const oldContLen = (orig.contains||[]).length;
+  if (newContLen !== oldContLen) changes.push('👜 Bag items: '+oldContLen+' → '+newContLen);
   if (changes.length) {
-    i.history.push({ date: new Date().toLocaleDateString('th-TH'), note: '✏️ Edited: ' + changes.join(', ') });
+    if (!pendingItem.history) pendingItem.history=[];
+    pendingItem.history.push({date:nowDate(), note:changes.join(' | ')});
   }
-  i.loc = newLoc;
-  i.desc = newDesc;
-  i.brand = newBrand;
-  await syncItem(i);
-  closeAll(); renderInventory(); toast('Item updated ✓');
+  // Apply to main items array
+  Object.assign(orig, pendingItem);
+  closeSheets();
+  renderInv(); renderBanners();
+  toast('Saved ✓');
+  await syncItem(orig);
 }
 
-async function syncItem(item) {
-  setSyncStatus('syncing');
-  // Serialize contains and history for storage
-  const payload = Object.assign({}, item, {
-    contains: JSON.stringify(item.contains||[]),
-    history: JSON.stringify(item.history||[])
-  });
-  try { await apiCall('updateItem', payload); setSyncStatus('ok'); }
-  catch(e) { setSyncStatus('err'); toast('Sync failed — check connection'); }
-}
-
-// ── NEW ITEM ──────────────────────────────────────────────────────────
-function openNewSheet() {
-  document.getElementById('brand-list').innerHTML = brands().map(b=>`<option value="${b}">`).join('');
-  ['n-brand','n-cat','n-desc','n-loc','n-barcode'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  openSheet('new-sheet');
-}
-
+// ═══════════════════════════════════════════════════════════════
+// NEW ITEM
+// ═══════════════════════════════════════════════════════════════
 async function addItem() {
   const brand = document.getElementById('n-brand').value.trim();
   const cat = document.getElementById('n-cat').value;
   if (!brand||!cat) { toast('Brand and category required'); return; }
-  const newItem = {id:nextId++, brand, cat, desc:document.getElementById('n-desc').value.trim(), status:'Available', loc:document.getElementById('n-loc').value.trim()||'—', barcode:document.getElementById('n-barcode').value.trim(), photo:''};
-  items.push(newItem);
-  // Update UI immediately
-  closeAll(); renderInventory();
+  const it = {id:nextId++,brand,cat,desc:document.getElementById('n-desc').value.trim(),status:'Available',loc:document.getElementById('n-loc').value.trim()||'—',barcode:document.getElementById('n-barcode').value.trim(),photo:'',contains:[],history:[{date:nowDate(),note:'➕ Item created'}]};
+  items.push(it);
+  closeSheets(); renderInv();
   toast('Item added ✓');
-  // Sync in background
-  setSyncStatus('syncing');
-  try { await apiCall('saveItem', newItem); setSyncStatus('ok'); }
-  catch(e) { setSyncStatus('err'); toast('Saved locally — sync failed'); }
+  await syncNewItem(it);
 }
 
-// ── EVENTS ────────────────────────────────────────────────────────────
-function openEventSheet() {
-  document.getElementById('e-name').value = '';
-  document.getElementById('e-start').value = today();
-  document.getElementById('e-end').value = today();
-  eventBrandFilter = 'All'; eventSelectedIds = new Set();
-  buildBrandChips(); renderEventItems();
-  openSheet('event-sheet');
+// ═══════════════════════════════════════════════════════════════
+// EVENTS
+// ═══════════════════════════════════════════════════════════════
+function buildEvBrands() {
+  document.getElementById('ev-brands').innerHTML = ['All',...brands()].map(b=>
+    `<div class="bchip${b===evBrand?' on':''}" onclick="evBrand='${b}';buildEvBrands();renderEvItems()">${b}</div>`).join('');
 }
-function buildBrandChips() {
-  document.getElementById('brand-chips').innerHTML = ['All',...brands()].map(b =>
-    `<div class="bchip${b===eventBrandFilter?' active':''}" onclick="setEBrand('${b}')">${b}</div>`).join('');
-}
-function setEBrand(b) { eventBrandFilter=b; buildBrandChips(); renderEventItems(); }
-function renderEventItems() {
-  const list = items.filter(i => (eventBrandFilter==='All'||i.brand===eventBrandFilter) && i.status==='Available');
-  if (!list.length) {
-    document.getElementById('event-items').innerHTML = '<div style="font-size:12px;color:var(--text2);padding:10px 6px">No available items for this brand</div>';
-    document.getElementById('e-sel-count').textContent = '0 items selected';
-    return;
-  }
-  document.getElementById('event-items').innerHTML = list.map(i => {
-    const c = eventSelectedIds.has(i.id);
-    return `<div class="eitem${c?' checked':''}" onclick="toggleEItem(${i.id})">
-      <div class="eitem-check">${c?'✔':''}</div>
+function renderEvItems() {
+  const list = items.filter(i=>(evBrand==='All'||i.brand===evBrand)&&i.status==='Available');
+  if (!list.length) { document.getElementById('ev-items').innerHTML='<div style="font-size:12px;color:var(--text2);padding:8px">No available items for this brand</div>'; return; }
+  document.getElementById('ev-items').innerHTML = list.map(i=>{
+    const on = evSelected.has(i.id);
+    return `<div class="eitem${on?' on':''}" onclick="toggleEvItem(${i.id})">
+      <div class="echk">${on?'✔':''}</div>
       <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.brand} — ${i.cat}</div><div style="font-size:10px;color:var(--text2)">${i.desc||'—'}</div></div>
-      <span style="font-size:16px;flex-shrink:0">${emoj(i.cat)}</span>
+      <span style="font-size:16px;flex-shrink:0">${em(i.cat)}</span>
     </div>`;
   }).join('');
-  document.getElementById('e-sel-count').textContent = eventSelectedIds.size + ' items selected';
+  document.getElementById('ev-count').textContent = evSelected.size + ' selected';
 }
-function toggleEItem(id) {
-  eventSelectedIds.has(id) ? eventSelectedIds.delete(id) : eventSelectedIds.add(id);
-  renderEventItems();
+function toggleEvItem(id) {
+  evSelected.has(id)?evSelected.delete(id):evSelected.add(id);
+  renderEvItems();
 }
+
 async function createEvent() {
-  try {
-    const name = document.getElementById('e-name').value.trim();
-    const start = document.getElementById('e-start').value;
-    const end = document.getElementById('e-end').value;
-    if (!name||!start||!end) { toast('Fill in event name and dates'); return; }
-    if (!eventSelectedIds.size) { toast('Select at least one item'); return; }
-    const ids = [...eventSelectedIds].map(Number);
-    const ev = {id: Date.now(), name, start, end, itemIds: ids, active: true};
-    // Update locally first
-    ids.forEach(id => { const i=items.find(x=>Number(x.id)===id); if(i){ i.status='In use at event'; if(!i.history)i.history=[]; i.history.push({date:new Date().toLocaleDateString('th-TH'),note:'⚡ Taken to event: '+name}); } });
-    events.push(ev);
-    closeAll();
-    renderInventory();
-    renderBanners();
-    renderEventsTab();
-    toast('Event created · ' + ids.length + ' items in use ✓');
-    // Sync in background
-    setSyncStatus('syncing');
-    try {
-      await apiCall('saveEvent', ev);
-      await apiCall('bulkUpdate', {items: ids.map(id => ({id, status:'In use at event'}))});
-      setSyncStatus('ok');
-    } catch(e) { setSyncStatus('err'); }
-  } catch(err) {
-    toast('Error: ' + err.message);
-    console.error(err);
-  }
-}
-function renderEventsTab() {
-  const active = events.filter(e => e.active);
-  const past = events.filter(e => !e.active);
-  let html = '';
-
-  if (!active.length && !past.length) {
-    html = '<div class="empty">📅<br><br>No events yet<br><span style="font-size:11px">Tap Event button to create one</span></div>';
-  }
-
-  if (active.length) {
-    html += '<div class="gh">Active events (' + active.length + ')</div>';
-    active.forEach(ev => {
-      const evItems = items.filter(i => ev.itemIds.map(Number).includes(Number(i.id)));
-      const checked = evItems.filter(i => i._packed).length;
-      html += '<div style="background:var(--blue-bg);border:1px solid #B5D4F4;border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer" onclick="openEventDetail(' + ev.id + ')">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
-        '<div style="font-size:13px;font-weight:600;color:var(--blue-text)">' + ev.name + '</div>' +
-        '<span class="sp si">' + evItems.length + ' items</span></div>' +
-        '<div style="font-size:11px;color:#185FA5;margin-bottom:10px">📅 ' + ev.start + ' → ' + ev.end + '</div>' +
-        '<div style="font-size:11px;font-weight:500;color:var(--blue-text);margin-bottom:6px">PACKING CHECKLIST</div>' +
-        evItems.map(i => {
-          const packed = i._packed || false;
-          return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #B5D4F4;cursor:pointer" onclick="event.stopPropagation();togglePacked(' + ev.id + ',' + i.id + ')">' +
-            '<div style="width:18px;height:18px;border-radius:4px;border:1.5px solid #378ADD;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:' + (packed?'#378ADD':'transparent') + ';color:#fff;font-size:11px">' + (packed?'✔':'') + '</div>' +
-            '<span style="font-size:14px">' + emoj(i.cat) + '</span>' +
-            '<div style="flex:1"><div style="font-size:12px;font-weight:500;' + (packed?'text-decoration:line-through;color:var(--text2)':'') + '">' + i.brand + ' — ' + i.cat + '</div>' +
-            '<div style="font-size:10px;color:var(--text2)">' + (i.desc||'—') + '</div></div>' +
-            (i.photo ? '<img src="' + i.photo + '" style="width:28px;height:28px;border-radius:5px;object-fit:cover">' : '') +
-            '</div>';
-        }).join('') +
-        '<button onclick="event.stopPropagation();returnAll(' + ev.id + ')" style="width:100%;margin-top:10px;background:#27500A;color:#fff;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">✔ Mark all returned</button>' +
-        '</div>';
-    });
-  }
-
-  if (past.length) {
-    html += '<div class="gh">Past events (' + past.length + ')</div>';
-    past.forEach(ev => {
-      html += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;opacity:.7">' +
-        '<div style="font-size:13px;font-weight:600">' + ev.name + '</div>' +
-        '<div style="font-size:11px;color:var(--text2);margin-top:3px">📅 ' + ev.start + ' → ' + ev.end + ' · ' + ev.itemIds.length + ' items</div>' +
-        '</div>';
-    });
-  }
-
-  const el = document.getElementById('view-events');
-  if (el) el.innerHTML = '<div style="padding:8px 14px 80px">' + html + '</div>';
-}
-
-function togglePacked(evId, itemId) {
-  const i = items.find(x => Number(x.id) === Number(itemId));
-  if (i) {
-    i._packed = !i._packed;
-    renderEventsTab();
-  }
+  const name = document.getElementById('ev-name').value.trim();
+  const start = document.getElementById('ev-start').value;
+  const end = document.getElementById('ev-end').value;
+  if (!name||!start||!end) { toast('Fill in event name and dates'); return; }
+  if (!evSelected.size) { toast('Select at least one item'); return; }
+  const ids = [...evSelected].map(Number);
+  const ev = {id:Date.now(), name, start, end, itemIds:ids, active:true};
+  // Update items locally + add history
+  ids.forEach(id => {
+    const i=items.find(x=>Number(x.id)===id); if(!i) return;
+    i.status='In use at event';
+    if(!i.history) i.history=[];
+    i.history.push({date:nowDate(), note:'⚡ Taken to event: '+name});
+  });
+  events.push(ev);
+  closeSheets();
+  renderInv(); renderBanners(); renderEventsTab();
+  toast('Event created · '+ids.length+' items ✓');
+  // Sync in background
+  await syncEvent(ev, true);
+  await syncBulk(ids.map(id=>({id,status:'In use at event'})));
+  // Sync each item's history
+  for (const id of ids) { const i=items.find(x=>x.id==id); if(i) await syncItem(i); }
 }
 
 function renderBanners() {
-  const active = events.filter(e => e.active);
-  document.getElementById('event-banners').innerHTML = active.map(e =>
-    `<div class="ebanner" onclick="openEventDetail(${e.id})">
-      <div class="eb-dot"></div>
-      <div style="flex:1"><div class="eb-text">${e.name}</div><div class="eb-sub">${e.start} → ${e.end} · ${e.itemIds.length} items</div></div>
-      <span>›</span>
+  document.getElementById('ebanners').innerHTML = events.filter(e=>e.active).map(e=>
+    `<div class="ebanner" onclick="openEvDetail(${e.id})">
+      <div class="ebdot"></div>
+      <div style="flex:1"><div style="font-size:12px;font-weight:500;color:var(--blue)">${e.name}</div><div style="font-size:10px;color:#185FA5">${e.start} → ${e.end} · ${e.itemIds.length} items</div></div>
+      <span style="color:var(--blue)">›</span>
     </div>`).join('');
 }
-function openEventDetail(eid) {
-  const ev = events.find(e => e.id==eid); if (!ev) return;
-  const evItems = items.filter(i => ev.itemIds.map(Number).includes(Number(i.id)));
-  document.getElementById('edetail-content').innerHTML = `
-    <div class="sh-title">📅 ${ev.name}</div>
-    <div style="font-size:11px;color:var(--text2);margin-bottom:14px">${ev.start} → ${ev.end}</div>
-    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">ITEMS AT THIS EVENT (${evItems.length})</div>
-    <div style="margin-bottom:14px;max-height:280px;overflow-y:auto">
-      ${evItems.map(i=>`<div class="detail-row">
-        <span style="font-size:18px">${emoj(i.cat)}</span>
-        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:500">${i.brand} — ${i.cat}</div><div style="font-size:11px;color:var(--text2)">${i.desc||'—'}</div></div>
-        <span class="sp si">In use</span>
-      </div>`).join('')}
-    </div>
-    <button class="btn-green" onclick="returnAll(${ev.id})">✔ Mark all returned</button>
-    <button class="btn-secondary" onclick="closeAll()">Close</button>
-  `;
-  openSheet('edetail-sheet');
-}
-async function returnAll(eid) {
-  const ev = events.find(e => e.id==eid); if (!ev) return;
-  ev.itemIds.forEach(id => { const i=items.find(x=>x.id==id); if(i){ i.status='Available'; if(!i.history)i.history=[]; i.history.push({date:new Date().toLocaleDateString('th-TH'),note:'✅ Returned from event: '+ev.name}); } });
-  ev.active = false;
-  // Update UI immediately
-  closeAll(); renderInventory(); renderBanners();
-  toast('All items returned ✓');
-  // Sync in background
-  setSyncStatus('syncing');
-  try {
-    await apiCall('updateEvent', ev);
-    await apiCall('bulkUpdate', {items: ev.itemIds.map(id=>({id,status:'Available'}))});
-    setSyncStatus('ok');
-  } catch(e) { setSyncStatus('err'); toast('Saved locally — sync failed'); }
+
+function renderEventsTab() {
+  const active = events.filter(e=>e.active);
+  const past = events.filter(e=>!e.active);
+  let html = '';
+  if (!active.length && !past.length) {
+    html = '<div class="empty">📅<br><br>No events yet<br><span style="font-size:11px">Tap Event button to create one</span></div>';
+  }
+  active.forEach(ev => {
+    const evItems = items.filter(i=>ev.itemIds.map(Number).includes(Number(i.id)));
+    html += `<div style="background:var(--blue-bg);border:1px solid #B5D4F4;border-radius:12px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-size:14px;font-weight:600;color:var(--blue)">${ev.name}</div>
+        <span class="pill pill-in">${evItems.length} items</span>
+      </div>
+      <div style="font-size:11px;color:#185FA5;margin-bottom:10px">📅 ${ev.start} → ${ev.end}</div>
+      <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Packing checklist</div>
+      ${evItems.map(i=>{
+        const packed=i._packed||false;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #B5D4F4;cursor:pointer" onclick="i_packed_toggle(${ev.id},${i.id})">
+          <div style="width:18px;height:18px;border-radius:4px;border:1.5px solid #378ADD;display:flex;align-items:center;justify-content:center;background:${packed?'#378ADD':'transparent'};color:#fff;font-size:11px;flex-shrink:0">${packed?'✔':''}</div>
+          <span style="font-size:15px">${em(i.cat)}</span>
+          <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;${packed?'text-decoration:line-through;color:var(--text2)':''};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.brand} — ${i.cat}</div><div style="font-size:10px;color:var(--text2)">${i.desc||'—'}${i.loc&&i.loc!=='—'?' · 📍'+i.loc:''}</div></div>
+          ${i.photo?`<img src="${i.photo}" style="width:28px;height:28px;border-radius:5px;object-fit:cover;flex-shrink:0">`:''}
+        </div>`;
+      }).join('')}
+      <button onclick="returnAll(${ev.id})" style="width:100%;margin-top:10px;background:#27500A;color:#fff;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit">✔ Mark all returned</button>
+    </div>`;
+  });
+  if (past.length) {
+    html += `<div class="gh">Past events (${past.length})</div>`;
+    past.forEach(ev => {
+      html += `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px;opacity:.7">
+        <div style="font-size:13px;font-weight:600">${ev.name}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:3px">📅 ${ev.start} → ${ev.end} · ${ev.itemIds.length} items</div>
+      </div>`;
+    });
+  }
+  document.getElementById('view-events').innerHTML = '<div style="padding:8px 14px 80px">' + html + '</div>';
 }
 
-// ── SCAN ──────────────────────────────────────────────────────────────
+function i_packed_toggle(evId, itemId) {
+  const i = items.find(x=>x.id==itemId); if (!i) return;
+  i._packed = !i._packed;
+  renderEventsTab();
+}
+
+function openEvDetail(eid) {
+  const ev = events.find(e=>e.id==eid); if (!ev) return;
+  const evItems = items.filter(i=>ev.itemIds.map(Number).includes(Number(i.id)));
+  document.getElementById('evd-content').innerHTML = `
+    <div class="mh"></div>
+    <div class="sh-title">📅 ${ev.name}</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:14px">${ev.start} → ${ev.end}</div>
+    <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Items (${evItems.length})</div>
+    ${evItems.map(i=>`<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="closeSheets();setTimeout(()=>openItemDetail(${i.id}),50)">
+      <span style="font-size:18px">${em(i.cat)}</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:500">${i.brand} — ${i.cat}</div><div style="font-size:11px;color:var(--text2)">${i.desc||'—'}</div></div>
+      <span class="pill pill-in">In use</span>
+    </div>`).join('')}
+    <button class="btn-g" onclick="returnAll(${ev.id})">✔ Mark all returned</button>
+  `;
+  openSheet('evd-sheet');
+}
+
+async function returnAll(eid) {
+  const ev = events.find(e=>e.id==eid); if (!ev) return;
+  ev.itemIds.forEach(id=>{
+    const i=items.find(x=>x.id==id); if(!i) return;
+    i.status='Available';
+    if(!i.history) i.history=[];
+    i.history.push({date:nowDate(),note:'✅ Returned from: '+ev.name});
+  });
+  ev.active=false;
+  closeSheets(); renderInv(); renderBanners(); renderEventsTab();
+  toast('All items returned ✓');
+  await syncEvent(ev, false);
+  await syncBulk(ev.itemIds.map(id=>({id,status:'Available'})));
+  for (const id of ev.itemIds) { const i=items.find(x=>x.id==id); if(i) await syncItem(i); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PHOTO
+// ═══════════════════════════════════════════════════════════════
+function loadPhotos() {
+  try {
+    const p = JSON.parse(localStorage.getItem('its_photos')||'{}');
+    items.forEach(i => { if(!i.photo&&p[i.id]) i.photo=p[i.id]; });
+  } catch(e){}
+}
+
+function handlePhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX=800; let w=img.width,h=img.height;
+      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const b64=canvas.toDataURL('image/jpeg',.80);
+      // Update pending or actual item immediately for preview
+      if (pendingItem && pendingItem.id==photoTargetId) {
+        pendingItem.photo=b64; renderItemDetail();
+      }
+      toast('Uploading photo...');
+      uploadPhoto(photoTargetId, b64);
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+  e.target.value='';
+}
+
+async function uploadPhoto(itemId, b64) {
+  if (isDemo) {
+    const i=items.find(x=>x.id==itemId); if(!i) return;
+    i.photo=b64;
+    try{const p=JSON.parse(localStorage.getItem('its_photos')||'{}');p[itemId]=b64;localStorage.setItem('its_photos',JSON.stringify(p));}catch(e){}
+    if(pendingItem&&pendingItem.id==itemId) pendingItem.photo=b64;
+    renderInv(); toast('Photo saved ✓'); return;
+  }
+  try {
+    const fd=new FormData();
+    fd.append('key',IMGBB);
+    fd.append('image',b64.replace(/^data:image\/\w+;base64,/,''));
+    fd.append('name','item_'+itemId);
+    const res=await fetch('https://api.imgbb.com/1/upload',{method:'POST',body:fd});
+    const r=await res.json();
+    if(r.success){
+      const url=r.data.display_url;
+      const i=items.find(x=>x.id==itemId); if(i) i.photo=url;
+      if(pendingItem&&pendingItem.id==itemId) pendingItem.photo=url;
+      try{const p=JSON.parse(localStorage.getItem('its_photos')||'{}');p[itemId]=url;localStorage.setItem('its_photos',JSON.stringify(p));}catch(e){}
+      await syncItem(items.find(x=>x.id==itemId));
+      renderInv(); renderItemDetail();
+      toast('Photo uploaded ✓ synced!');
+    } else throw new Error(r.error?.message||'Upload failed');
+  } catch(err) {
+    // Keep local
+    const i=items.find(x=>x.id==itemId); if(i) i.photo=b64;
+    try{const p=JSON.parse(localStorage.getItem('its_photos')||'{}');p[itemId]=b64;localStorage.setItem('its_photos',JSON.stringify(p));}catch(e){}
+    renderInv();
+    toast('Upload failed — photo saved locally');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCAN
+// ═══════════════════════════════════════════════════════════════
 function initScanner() {
   if (qrScanner) return;
   try {
     qrScanner = new Html5Qrcode('qr-reader');
-    qrScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:120}},onScanSuccess,()=>{})
-      .catch(()=>{ document.getElementById('scan-hint').textContent='Camera permission denied. Enable in browser settings.'; });
-  } catch(e) { document.getElementById('scan-hint').textContent='Scanner not available on this browser.'; }
+    qrScanner.start({facingMode:'environment'},{fps:10,qrbox:{width:220,height:100}},code=>{
+      const found=items.find(i=>i.barcode===code);
+      scannedId=found?found.id:null;
+      document.getElementById('scan-result').style.display='block';
+      document.getElementById('sr-emoji').textContent=found?em(found.cat):'❓';
+      document.getElementById('sr-name').textContent=found?found.brand+' — '+found.cat:'Unknown barcode';
+      document.getElementById('sr-detail').textContent=found?(found.desc||'—')+' · '+found.loc:code;
+      const sp=document.getElementById('sr-pill');
+      if(found){sp.textContent=found.status==='Available'?'Available':'In use';sp.className='pill '+(found.status==='Available'?'pill-av':'pill-in');}
+      else{sp.textContent='—';sp.className='pill';}
+      document.getElementById('scan-hint').textContent=found?'Found! Toggle status below':'Not in inventory — add via New+';
+    },()=>{}).catch(()=>{ document.getElementById('scan-hint').textContent='Camera denied — enable in browser settings'; });
+  } catch(e){ document.getElementById('scan-hint').textContent='Scanner not available'; }
 }
-function stopScanner() {
-  if (qrScanner) { try { qrScanner.stop().then(()=>{qrScanner.clear();qrScanner=null;}); } catch(e) { qrScanner=null; } }
+function stopScanner(){if(qrScanner){try{qrScanner.stop().then(()=>{qrScanner.clear();qrScanner=null;});}catch(e){qrScanner=null;}}}
+async function toggleScanStatus(){
+  if(!scannedId){toast('No item');return;}
+  const i=items.find(x=>x.id==scannedId);if(!i)return;
+  i.status=i.status==='Available'?'In use at event':'Available';
+  if(!i.history)i.history=[];
+  i.history.push({date:nowDate(),note:(i.status==='Available'?'✅':'⚡')+' Status changed via scan'});
+  document.getElementById('sr-pill').textContent=i.status==='Available'?'Available':'In use';
+  document.getElementById('sr-pill').className='pill '+(i.status==='Available'?'pill-av':'pill-in');
+  renderInv();renderBanners();toast('Status: '+i.status);
+  await syncItem(i);
 }
-function onScanSuccess(code) {
-  const found = items.find(i => i.barcode===code);
-  scannedItemId = found ? found.id : null;
-  document.getElementById('scan-result-card').classList.add('show');
-  if (found) {
-    document.getElementById('sr-emoji').textContent = emoj(found.cat);
-    document.getElementById('sr-name').textContent = found.brand+' — '+found.cat;
-    document.getElementById('sr-detail').textContent = (found.desc||'—')+' · '+found.loc;
-    const sp = document.getElementById('sr-status');
-    sp.textContent = found.status==='Available'?'Available':'In use';
-    sp.className = 'sp '+(found.status==='Available'?'sa':'si');
-    document.getElementById('scan-hint').textContent = 'Item found — tap Toggle to update status';
-  } else {
-    document.getElementById('sr-emoji').textContent = '❓';
-    document.getElementById('sr-name').textContent = 'Unknown barcode';
-    document.getElementById('sr-detail').textContent = code;
-    document.getElementById('sr-status').textContent = '—';
-    document.getElementById('sr-status').className = 'sp';
-    document.getElementById('scan-hint').textContent = 'Not in inventory. Add via New+ button.';
-  }
-}
-async function toggleScannedStatus() {
-  if (!scannedItemId) { toast('No item found'); return; }
-  const i = items.find(x => x.id==scannedItemId); if (!i) return;
-  i.status = i.status==='Available' ? 'In use at event' : 'Available';
-  await syncItem(i); onScanSuccess(i.barcode); renderInventory(); renderBanners();
-  toast('Status: '+i.status);
-}
-function clearScan() {
-  document.getElementById('scan-result-card').classList.remove('show');
-  document.getElementById('scan-hint').textContent = 'Point camera at a barcode to look up an item';
-  scannedItemId = null;
-}
+function clearScan(){document.getElementById('scan-result').style.display='none';document.getElementById('scan-hint').textContent='Point camera at a barcode';scannedId=null;}
 
-// ── EXCEL ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// EXCEL
+// ═══════════════════════════════════════════════════════════════
 function renderExcel() {
-  const preview = items.slice(0,5);
   document.getElementById('view-excel').innerHTML = `
-    <div class="excel-card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <div class="xl-icon" style="background:#217346">📊</div>
-        <div><div style="font-size:13px;font-weight:600">Export to Excel</div><div style="font-size:11px;color:var(--text2)">Download all ${items.length} items as .xlsx</div></div>
+    <div style="padding:14px 0 80px">
+      <div class="xl-card">
+        <div class="xl-hrow"><div class="xl-ico" style="background:#217346">📊</div><div><div style="font-size:13px;font-weight:600">Export to Excel</div><div style="font-size:11px;color:var(--text2)">${items.length} items + Summary</div></div></div>
+        <button class="btn-xl" style="background:#217346" onclick="exportXL()">⬇ Export ITS_Inventory.xlsx</button>
       </div>
-      <button class="btn-xl" onclick="exportExcel()">⬇ Export ITS_Inventory.xlsx</button>
-    </div>
-    <div class="excel-card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <div class="xl-icon" style="background:#185FA5">⬆</div>
-        <div><div style="font-size:13px;font-weight:600">Import from Excel</div><div style="font-size:11px;color:var(--text2)">Add items from .xlsx file</div></div>
+      <div class="xl-card">
+        <div class="xl-hrow"><div class="xl-ico" style="background:#185FA5">⬆</div><div><div style="font-size:13px;font-weight:600">Import from Excel</div><div style="font-size:11px;color:var(--text2)">Add new items from .xlsx</div></div></div>
+        <button class="btn-xl-o" onclick="document.getElementById('file-import').click()">📂 Choose file</button>
       </div>
-      <button class="btn-xl-out" onclick="document.getElementById('file-import').click()">📂 Choose Excel file</button>
-    </div>
-    ${!demoMode?`<div class="excel-card" style="background:#fff9e6;border-color:#f0d060">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <div class="xl-icon" style="background:#b8860b">🔄</div>
-        <div><div style="font-size:13px;font-weight:600">Sync from Google Sheets</div><div style="font-size:11px;color:var(--text2)">Reload latest data from Sheets</div></div>
+      ${!isDemo?`<div class="xl-card" style="background:#fff9e6;border-color:#f0d060">
+        <div class="xl-hrow"><div class="xl-ico" style="background:#b8860b">🔄</div><div><div style="font-size:13px;font-weight:600">Reload from Sheets</div><div style="font-size:11px;color:var(--text2)">Refresh latest data</div></div></div>
+        <button class="btn-xl" style="background:#b8860b" onclick="reloadSheets()">🔄 Reload</button>
+      </div>`:''}
+      <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin-bottom:8px">Preview</div>
+      <div style="overflow-x:auto;border-radius:var(--r);border:1px solid var(--border)">
+        <table class="ptable">
+          <thead><tr><th>Brand</th><th>Category</th><th>Desc</th><th>Status</th></tr></thead>
+          <tbody>${items.slice(0,6).map(i=>`<tr><td>${i.brand}</td><td>${i.cat}</td><td>${i.desc||'—'}</td><td><span class="pill ${i.status==='Available'?'pill-av':'pill-in'}" style="font-size:10px">${i.status==='Available'?'Available':'In use'}</span></td></tr>`).join('')}</tbody>
+        </table>
       </div>
-      <button class="btn-xl" style="background:#b8860b" onclick="reloadFromSheets()">🔄 Reload from Google Sheets</button>
-    </div>`:''}
-    <div style="font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin-bottom:8px">Preview</div>
-    <div style="overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)">
-      <table class="preview-table">
-        <thead><tr><th>Brand</th><th>Category</th><th>Description</th><th>Status</th></tr></thead>
-        <tbody>${preview.map(i=>`<tr><td>${i.brand}</td><td>${i.cat}</td><td>${i.desc||'—'}</td><td><span class="sp ${i.status==='Available'?'sa':'si'}" style="font-size:10px">${i.status==='Available'?'Available':'In use'}</span></td></tr>`).join('')}</tbody>
-      </table>
     </div>`;
 }
 
-function exportExcel() {
-  const ws_data = [['ID','Brand','Category','Description','Status','Location','Barcode']];
-  items.forEach(i => ws_data.push([i.id,i.brand,i.cat,i.desc||'',i.status,i.loc==='—'?'':i.loc,i.barcode||'']));
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+function exportXL() {
+  const wb=XLSX.utils.book_new();
+  const d=[['ID','Brand','Category','Description','Status','Location','Barcode']];
+  items.forEach(i=>d.push([i.id,i.brand,i.cat,i.desc||'',i.status,i.loc==='—'?'':i.loc,i.barcode||'']));
+  const ws=XLSX.utils.aoa_to_sheet(d);
   ws['!cols']=[{wch:6},{wch:18},{wch:20},{wch:25},{wch:18},{wch:16},{wch:18}];
   XLSX.utils.book_append_sheet(wb,ws,'DATA');
-  const sum = [['Brand','Total','Available','In use']];
-  brands().forEach(b=>{const bi=items.filter(i=>i.brand===b);sum.push([b,bi.length,bi.filter(i=>i.status==='Available').length,bi.filter(i=>i.status!=='Available').length]);});
-  const ws2=XLSX.utils.aoa_to_sheet(sum); ws2['!cols']=[{wch:22},{wch:8},{wch:12},{wch:10}];
+  const s=[['Brand','Total','Available','In use']];
+  brands().forEach(b=>{const bi=items.filter(i=>i.brand===b);s.push([b,bi.length,bi.filter(i=>i.status==='Available').length,bi.filter(i=>i.status!=='Available').length]);});
+  const ws2=XLSX.utils.aoa_to_sheet(s);ws2['!cols']=[{wch:22},{wch:8},{wch:12},{wch:10}];
   XLSX.utils.book_append_sheet(wb,ws2,'Summary');
   XLSX.writeFile(wb,'ITS_Inventory.xlsx');
-  toast('Excel exported ✓');
+  toast('Exported ✓');
 }
 
-async function reloadFromSheets() {
-  showLoading('Loading from Google Sheets...');
+async function reloadSheets() {
+  loader(true,'Reloading...');
   try {
-    const res = await apiCall('getItems');
-    items = res.items.map(normalizeItem);
-    const evRes = await apiCall('getEvents');
-    events = evRes.events || [];
-    nextId = items.length ? Math.max(...items.map(i=>Number(i.id)))+1 : 1;
-    setSyncStatus('ok'); renderInventory(); renderBanners(); renderExcel();
-    toast('Reloaded ✓');
-  } catch(e) { setSyncStatus('err'); toast('Reload failed'); }
-  hideLoading();
+    const res=await jcall('getItems'); items=res.items.map(mkItem); loadPhotos();
+    const er=await jcall('getEvents'); events=er.events||[];
+    nextId=items.length?Math.max(...items.map(i=>i.id))+1:200;
+    renderInv();renderBanners();renderExcel();setSyncDot('ok');toast('Reloaded ✓');
+  } catch(e){setSyncDot('err');toast('Reload failed');}
+  loader(false);
 }
 
-async function importExcel(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async function(ev) {
+async function importXL(e) {
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    loader(true,'Importing...');
     try {
-      const wb = XLSX.read(ev.target.result,{type:'binary'});
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
-      if (rows.length<2) { toast('No data found'); return; }
-      const h = rows[0].map(x=>String(x).toLowerCase().trim());
-      const gi = n => h.indexOf(n)>=0?h.indexOf(n):-1;
+      const wb=XLSX.read(ev.target.result,{type:'binary'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+      if(rows.length<2){toast('No data');loader(false);return;}
+      const h=rows[0].map(x=>String(x).toLowerCase().trim());
+      const gi=n=>h.indexOf(n)>=0?h.indexOf(n):-1;
       let count=0;
-      showLoading('Importing...');
-      for (const row of rows.slice(1)) {
+      for(const row of rows.slice(1)){
         const brand=String(row[gi('brand')]||row[0]||'').trim();
         const cat=String(row[gi('category')]||row[1]||'').trim();
-        if (!brand||!cat) continue;
+        if(!brand||!cat) continue;
         const exists=items.find(i=>i.brand===brand&&i.cat===cat&&(i.desc||'')===(String(row[gi('description')]||row[2]||'').trim()));
-        if (!exists) {
-          const ni={id:nextId++,brand,cat,desc:String(row[gi('description')]||row[2]||'').trim(),status:String(row[gi('status')]||'Available').trim(),loc:String(row[gi('location')]||'—').trim()||'—',barcode:String(row[gi('barcode')]||'').trim(),photo:''};
-          items.push(ni); await apiCall('saveItem',ni); count++;
+        if(!exists){
+          const ni={id:nextId++,brand,cat,desc:String(row[gi('description')]||row[2]||'').trim(),status:String(row[gi('status')]||'Available').trim(),loc:String(row[gi('location')]||'—').trim()||'—',barcode:String(row[gi('barcode')]||'').trim(),photo:'',contains:[],history:[{date:nowDate(),note:'⬆ Imported from Excel'}]};
+          items.push(ni);await syncNewItem(ni);count++;
         }
       }
-      hideLoading(); renderInventory(); renderExcel(); setSyncStatus('ok');
-      toast(count+' items imported ✓');
-    } catch(err) { hideLoading(); toast('Error: '+err.message); }
+      loader(false);renderInv();renderExcel();toast(count+' items imported ✓');
+    }catch(err){loader(false);toast('Error: '+err.message);}
   };
   reader.readAsBinaryString(file);
   e.target.value='';
 }
 
-// ── STATS ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════════════════════
 function renderStats() {
-  const total=items.length, avail=items.filter(i=>i.status==='Available').length, inuse=items.filter(i=>i.status!=='Available').length;
-  const bCounts=brands().map(b=>({name:b,count:items.filter(i=>i.brand===b).length})).sort((a,b)=>b.count-a.count);
+  const total=items.length,avail=items.filter(i=>i.status==='Available').length,inuse=items.filter(i=>i.status!=='Available').length;
+  const bC=brands().map(b=>({name:b,n:items.filter(i=>i.brand===b).length})).sort((a,b)=>b.n-a.n);
   const cats=[...new Set(items.map(i=>i.cat))].sort();
-  const cCounts=cats.map(c=>({name:c,count:items.filter(i=>i.cat===c).length})).sort((a,b)=>b.count-a.count);
-  const maxB=bCounts[0]?.count||1, maxC=cCounts[0]?.count||1;
+  const cC=cats.map(c=>({name:c,n:items.filter(i=>i.cat===c).length})).sort((a,b)=>b.n-a.n);
+  const mb=bC[0]?.n||1,mc=cC[0]?.n||1;
   document.getElementById('view-stats').innerHTML=`
-    <div class="stats-grid">
-      <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-label">Total items</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--green-text)">${avail}</div><div class="stat-label">Available</div></div>
-      <div class="stat-card"><div class="stat-val" style="color:var(--amber-text)">${inuse}</div><div class="stat-label">In use</div></div>
-      <div class="stat-card"><div class="stat-val">${brands().length}</div><div class="stat-label">Brands</div></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Items by brand</div>
-      ${bCounts.map(b=>`<div class="bar-row"><div class="bar-label">${b.name}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(b.count/maxB*100)}%"></div></div><div class="bar-count">${b.count}</div></div>`).join('')}
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Items by category</div>
-      ${cCounts.map(c=>`<div class="bar-row"><div class="bar-label">${CE[c.name]||'📦'} ${c.name}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(c.count/maxC*100)}%"></div></div><div class="bar-count">${c.count}</div></div>`).join('')}
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Active events</div>
-      ${events.filter(e=>e.active).length===0?'<div style="font-size:12px;color:var(--text2)">No active events</div>':events.filter(e=>e.active).map(e=>`<div class="bar-row"><div class="bar-label">${e.name}</div><div class="bar-track"><div class="bar-fill" style="width:100%;background:#378ADD"></div></div><div class="bar-count">${e.itemIds.length}</div></div>`).join('')}
-    </div>
-    ${!demoMode?`<div style="margin-top:14px"><button class="btn-secondary" onclick="resetAPIUrl()">⚙ Change Google Sheets URL</button></div>`:''}
-  `;
+    <div style="padding:14px 0 80px">
+      <div class="sgrid">
+        <div class="scard"><div class="sval">${total}</div><div class="slabel">Total items</div></div>
+        <div class="scard"><div class="sval" style="color:var(--green)">${avail}</div><div class="slabel">Available</div></div>
+        <div class="scard"><div class="sval" style="color:var(--amber)">${inuse}</div><div class="slabel">In use</div></div>
+        <div class="scard"><div class="sval">${brands().length}</div><div class="slabel">Brands</div></div>
+      </div>
+      <div class="ccrd"><div class="ctitle">Items by brand</div>${bC.map(b=>`<div class="brow"><div class="blabel">${b.name}</div><div class="btrack"><div class="bfill" style="width:${Math.round(b.n/mb*100)}%"></div></div><div class="bcount">${b.n}</div></div>`).join('')}</div>
+      <div class="ccrd"><div class="ctitle">Items by category</div>${cC.map(c=>`<div class="brow"><div class="blabel">${em(c.name)} ${c.name}</div><div class="btrack"><div class="bfill" style="width:${Math.round(c.n/mc*100)}%"></div></div><div class="bcount">${c.n}</div></div>`).join('')}</div>
+      <div class="ccrd"><div class="ctitle">Active events</div>${events.filter(e=>e.active).length?events.filter(e=>e.active).map(e=>`<div class="brow"><div class="blabel">${e.name}</div><div class="btrack"><div class="bfill" style="width:100%;background:#378ADD"></div></div><div class="bcount">${e.itemIds.length}</div></div>`).join(''):'<div style="font-size:12px;color:var(--text2)">No active events</div>'}</div>
+      ${!isDemo?'<button class="btn-s" style="margin-top:4px" onclick="resetApi()">⚙ Change Google Sheets URL</button>':''}
+    </div>`;
 }
-
-// ── SHEETS ────────────────────────────────────────────────────────────
-function openSheet(id) {
-  const ov = document.getElementById('ov');
-  ov.classList.add('open');
-  ov.style.pointerEvents = '';
-  const el = document.getElementById(id);
-  // Force display before adding class so transition works
-  el.style.display = (id === 'event-sheet') ? 'flex' : 'block';
-  requestAnimationFrame(() => el.classList.add('open'));
-}
-function closeAll() {
-  const ov = document.getElementById('ov');
-  ov.classList.remove('open');
-  ov.style.pointerEvents = 'none';
-  ['new-sheet','sort-sheet','event-sheet','edetail-sheet','item-sheet'].forEach(s=>{
-    const el = document.getElementById(s);
-    if(el){ el.classList.remove('open'); el.style.display='none'; }
-  });
-  // Re-enable pointer events on main content after short delay
-  setTimeout(() => { ov.style.pointerEvents = ''; }, 50);
-}
-function openSortSheet() { openSheet('sort-sheet'); }
-function resetAPIUrl() { localStorage.removeItem('its_api_url'); location.reload(); }
+function resetApi(){localStorage.removeItem('its_api');location.reload();}
 </script>
 </body>
 </html>

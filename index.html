@@ -560,7 +560,15 @@ async function syncBulk(updates) {
 }
 async function syncEvent(ev, isNew) {
   setSyncDot('syncing');
-  const payload = {...ev, itemIds:JSON.stringify(ev.itemIds)};
+  // Keep itemIds as array — Apps Script will handle serialization
+  const payload = {
+    id: ev.id,
+    name: ev.name,
+    start: ev.start,
+    end: ev.end,
+    itemIds: ev.itemIds, // send as array, let JSON.stringify handle it
+    active: ev.active
+  };
   try { await jcall(isNew?'saveEvent':'updateEvent', payload); setSyncDot('ok'); saveDemo(); }
   catch(e) { setSyncDot('err'); }
 }
@@ -594,10 +602,13 @@ function openSheet(id) {
   document.getElementById(id).classList.add('on');
   // Pre-fill event sheet dates
   if (id==='ev-sheet') {
+    document.getElementById('ev-name').value = '';
     document.getElementById('ev-start').value = today();
     document.getElementById('ev-end').value = today();
     evBrand='All'; evSelected=new Set();
     buildEvBrands(); renderEvItems();
+    // Focus name field after sheet opens
+    setTimeout(()=>{ const n=document.getElementById('ev-name'); if(n) n.focus(); }, 300);
   }
   if (id==='new-sheet') {
     document.getElementById('brand-dl').innerHTML = brands().map(b=>`<option value="${b}">`).join('');
@@ -894,29 +905,40 @@ function toggleEvItem(id) {
 }
 
 async function createEvent() {
-  const name = document.getElementById('ev-name').value.trim();
-  const start = document.getElementById('ev-start').value;
-  const end = document.getElementById('ev-end').value;
-  if (!name||!start||!end) { toast('Fill in event name and dates'); return; }
-  if (!evSelected.size) { toast('Select at least one item'); return; }
-  const ids = [...evSelected].map(Number);
-  const ev = {id:Date.now(), name, start, end, itemIds:ids, active:true};
-  // Update items locally + add history
-  ids.forEach(id => {
-    const i=items.find(x=>Number(x.id)===id); if(!i) return;
-    i.status='In use at event';
-    if(!i.history) i.history=[];
-    i.history.push({date:nowDate(), note:'⚡ Taken to event: '+name});
-  });
-  events.push(ev);
-  closeSheets();
-  renderInv(); renderBanners(); renderEventsTab();
-  toast('Event created · '+ids.length+' items ✓');
-  // Sync in background
-  await syncEvent(ev, true);
-  await syncBulk(ids.map(id=>({id,status:'In use at event'})));
-  // Sync each item's history
-  for (const id of ids) { const i=items.find(x=>x.id==id); if(i) await syncItem(i); }
+  try {
+    const name = document.getElementById('ev-name').value.trim();
+    const start = document.getElementById('ev-start').value;
+    const end = document.getElementById('ev-end').value;
+    if (!name) { toast('Please enter an event name'); return; }
+    if (!start||!end) { toast('Please select start and end dates'); return; }
+    if (!evSelected.size) { toast('Please select at least one item'); return; }
+    const ids = [...evSelected].map(Number);
+    const ev = {id:Date.now(), name, start, end, itemIds:ids, active:true};
+    // Update items locally first — UI responds immediately
+    ids.forEach(id => {
+      const i=items.find(x=>Number(x.id)===id); if(!i) return;
+      i.status='In use at event';
+      if(!i.history) i.history=[];
+      i.history.push({date:nowDate(), note:'⚡ Taken to event: '+name});
+    });
+    events.push(ev);
+    // Close sheet and update UI right away — don't wait for sync
+    closeSheets();
+    renderInv(); renderBanners(); renderEventsTab();
+    toast('Event created · '+ids.length+' items ✓');
+    // Sync in background silently
+    try {
+      await syncEvent(ev, true);
+      await syncBulk(ids.map(id=>({id,status:'In use at event'})));
+      for (const id of ids) { const i=items.find(x=>x.id==id); if(i) await syncItem(i); }
+    } catch(syncErr) {
+      setSyncDot('err');
+      // Event still created locally — just sync failed
+    }
+  } catch(err) {
+    toast('Error: ' + err.message);
+    console.error('createEvent error:', err);
+  }
 }
 
 function renderBanners() {

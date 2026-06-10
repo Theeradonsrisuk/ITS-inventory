@@ -147,7 +147,7 @@ html,body{height:100%;background:#111;font-family:'IBM Plex Sans',sans-serif;ove
 .bcount{font-size:11px;color:var(--text2);font-family:'IBM Plex Mono',monospace;width:24px;text-align:right}
 
 /* ── CYBER LOADER ── */
-.loader{position:absolute;inset:0;background:rgba(0,0,0,.8);z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;backdrop-filter:blur(6px);border-radius:0}
+.loader{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;backdrop-filter:blur(6px);border-radius:0}
 .loader.on{display:flex}
 .cyring{position:relative;width:72px;height:72px}
 .cr{position:absolute;inset:0;border-radius:50%;border:3px solid transparent}
@@ -417,7 +417,20 @@ function mkItem(r) {
   let contains=[],history=[];
   try{contains=JSON.parse(r.contains||'[]');}catch(e){}
   try{history=JSON.parse(r.history||'[]');}catch(e){}
-  return {id:Number(r[0]||r.id)||0,brand:r[1]||r.brand||'',cat:r[2]||r.cat||'',desc:r[3]||r.desc||'',status:r[4]||r.status||'Available',loc:r[5]||r.loc||'—',barcode:r[6]||r.barcode||'',photo:r.photo||'',contains,history};
+  return {
+    id:Number(r[0]||r.id)||0,
+    brand:r[1]||r.brand||'',
+    cat:r[2]||r.cat||'',
+    desc:r[3]||r.desc||'',
+    status:r[4]||r.status||'Available',
+    loc:r[5]||r.loc||'—',
+    barcode:r[6]||r.barcode||'',
+    photo:r.photo||'',
+    contains,
+    history,
+    condition: Number(r.condition)||100,
+    retired: r.retired==='true'||r.retired===true||false
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -516,17 +529,30 @@ function hideErr() { document.getElementById('setup-err').style.display='none'; 
 // SYNC
 // ═══════════════════════════════════════════════════════════════
 async function syncItem(item) {
-  const payload = {...item, contains:JSON.stringify(item.contains||[]), history:JSON.stringify(item.history||[])};
+  const payload = {
+    ...item,
+    contains: JSON.stringify(item.contains||[]),
+    history: JSON.stringify(item.history||[]),
+    condition: item.condition??100,
+    retired: item.retired||false
+  };
   setSyncDot('syncing');
   try { await jcall('updateItem', payload); setSyncDot('ok'); saveDemo(); }
   catch(e) { setSyncDot('err'); toast('Sync failed'); }
 }
 async function syncNewItem(item) {
-  const payload = {...item, contains:JSON.stringify(item.contains||[]), history:JSON.stringify(item.history||[])};
+  const payload = {
+    ...item,
+    contains: JSON.stringify(item.contains||[]),
+    history: JSON.stringify(item.history||[]),
+    condition: item.condition??100,
+    retired: item.retired||false
+  };
   setSyncDot('syncing');
   try { await jcall('saveItem', payload); setSyncDot('ok'); saveDemo(); }
   catch(e) { setSyncDot('err'); toast('Sync failed'); }
 }
+
 async function syncBulk(updates) {
   setSyncDot('syncing');
   try { await jcall('bulkUpdate', {items:updates}); setSyncDot('ok'); saveDemo(); }
@@ -589,7 +615,8 @@ function closeSheets() {
 // INVENTORY
 // ═══════════════════════════════════════════════════════════════
 function buildChips() {
-  document.getElementById('chips').innerHTML = ['All','Available','In use','By Brand','By Category'].map(c =>
+  const retiredCount = items.filter(i=>i.retired).length;
+  document.getElementById('chips').innerHTML = ['All','Available','In use','By Brand','By Category',...(retiredCount?['Retired '+retiredCount]:['Retired'])].map(c =>
     `<div class="chip${c===filterChip?' on':''}" onclick="setChip('${c}')">${c}</div>`).join('');
 }
 function setChip(c) {
@@ -607,6 +634,8 @@ function setSort(s) {
 function renderInv() {
   const q = document.getElementById('srch').value.toLowerCase();
   let list = items.filter(i => {
+    if (filterChip==='Retired') return i.retired===true;
+    if (i.retired) return false; // hide retired from all other views
     if (filterChip==='Available' && i.status!=='Available') return false;
     if (filterChip==='In use' && i.status!=='In use at event') return false;
     if (q && !(i.brand.toLowerCase().includes(q)||i.cat.toLowerCase().includes(q)||(i.desc||'').toLowerCase().includes(q))) return false;
@@ -639,7 +668,8 @@ function renderInv() {
           <div class="isub">${sub}${i.loc&&i.loc!=='—'?' · 📍'+i.loc:''}</div>
         </div>
         <div class="iright">
-          <span class="pill ${pill}">${plabel}</span>
+          <span class="pill ${pill}">${i.retired?'🗑 Retired':plabel}</span>
+          ${(i.condition??100)<100?`<span style="font-size:9px;padding:1px 6px;border-radius:20px;background:${bg(i.cat)};color:${condColor(i.condition??100)};font-weight:500">${i.condition??100}%</span>`:''}
           ${i.barcode?`<span class="mono">${String(i.barcode).slice(-6)}</span>`:''}
         </div>
       </div>`;
@@ -654,8 +684,14 @@ function renderInv() {
 // ═══════════════════════════════════════════════════════════════
 function openItemDetail(id) {
   const i = items.find(x=>x.id==id); if (!i) return;
-  // Make a pending copy — only saved when user taps Save
-  pendingItem = JSON.parse(JSON.stringify(i));
+  // Deep clone — completely independent copy, no shared references
+  pendingItem = JSON.parse(JSON.stringify({
+    ...i,
+    contains: i.contains ? [...i.contains.map(c=>({...c}))] : [],
+    history: i.history ? [...i.history] : [],
+    condition: i.condition??100,
+    retired: i.retired||false
+  }));
   renderItemDetail();
   document.getElementById('overlay').classList.add('on');
   document.getElementById('item-sheet').classList.add('on');
@@ -744,12 +780,20 @@ function renderItemDetail() {
       <button class="stog-btn ${avA}" onclick="setDetailStatus('Available')">✓ Available</button>
       <button class="stog-btn ${inA}" onclick="setDetailStatus('In use at event')">⚡ In use</button>
     </div>
+    <div class="flabel" style="margin-top:12px">Condition — <span id="cond-val" style="font-weight:600;color:${condColor(i.condition??100)}">${i.condition??100}%</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+      <input type="range" id="cond-slider" min="0" max="100" value="${i.condition??100}" style="flex:1;accent-color:${condColor(i.condition??100)}" oninput="pendingItem.condition=Number(this.value);document.getElementById('cond-val').textContent=this.value+'%';document.getElementById('cond-val').style.color=condColor(Number(this.value));this.style.accentColor=condColor(Number(this.value))">
+      <div style="width:36px;height:10px;border-radius:5px;background:${condColor(i.condition??100)};opacity:.85"></div>
+    </div>
     ${containsHtml}
     ${insideHtml}
     ${histHtml}
   `;
+  const retLabel = i.retired ? '♻️ Unretire item' : '🗑 Retire item (keep in history)';
+  const retStyle = i.retired ? 'background:#27500A;color:#fff;border:none' : 'background:transparent;color:var(--red);border:1px solid var(--red)';
   document.getElementById('item-foot').innerHTML = `
     <button class="btn-p" onclick="saveItemDetail()">✔ Save changes</button>
+    <button style="width:100%;border-radius:10px;padding:11px;font-size:13px;cursor:pointer;font-family:inherit;margin-top:8px;${retStyle}" onclick="toggleRetire()">${retLabel}</button>
     <button class="btn-s" onclick="closeSheets()">Cancel</button>
   `;
 }
@@ -769,6 +813,21 @@ function addContains() {
   renderItemDetail();
 }
 
+function condColor(v) {
+  if (v>=80) return '#27500A';
+  if (v>=50) return '#b8860b';
+  if (v>=20) return '#cc5500';
+  return '#A32D2D';
+}
+
+function toggleRetire() {
+  if (!pendingItem) return;
+  pendingItem.retired = !pendingItem.retired;
+  if (!pendingItem.history) pendingItem.history=[];
+  pendingItem.history.push({date:nowDate(), note: pendingItem.retired ? '🗑 Item retired' : '♻️ Item unretired'});
+  renderItemDetail();
+}
+
 async function saveItemDetail() {
   if (!pendingItem) return;
   const orig = items.find(x=>x.id==pendingItem.id); if (!orig) return;
@@ -781,6 +840,8 @@ async function saveItemDetail() {
   const newContLen = (pendingItem.contains||[]).length;
   const oldContLen = (orig.contains||[]).length;
   if (newContLen !== oldContLen) changes.push('👜 Bag items: '+oldContLen+' → '+newContLen);
+  if ((pendingItem.condition??100) !== (orig.condition??100)) changes.push('🔧 Condition: '+(orig.condition??100)+'% → '+(pendingItem.condition??100)+'%');
+  if (pendingItem.retired !== orig.retired) changes.push(pendingItem.retired ? '🗑 Retired' : '♻️ Unretired');
   if (changes.length) {
     if (!pendingItem.history) pendingItem.history=[];
     pendingItem.history.push({date:nowDate(), note:changes.join(' | ')});
@@ -1080,8 +1141,8 @@ function renderExcel() {
 
 function exportXL() {
   const wb=XLSX.utils.book_new();
-  const d=[['ID','Brand','Category','Description','Status','Location','Barcode']];
-  items.forEach(i=>d.push([i.id,i.brand,i.cat,i.desc||'',i.status,i.loc==='—'?'':i.loc,i.barcode||'']));
+  const d=[['ID','Brand','Category','Description','Status','Location','Barcode','Condition%','Retired']];
+  items.forEach(i=>d.push([i.id,i.brand,i.cat,i.desc||'',i.status,i.loc==='—'?'':i.loc,i.barcode||'',i.condition??100,i.retired?'Yes':'']));
   const ws=XLSX.utils.aoa_to_sheet(d);
   ws['!cols']=[{wch:6},{wch:18},{wch:20},{wch:25},{wch:18},{wch:16},{wch:18}];
   XLSX.utils.book_append_sheet(wb,ws,'DATA');

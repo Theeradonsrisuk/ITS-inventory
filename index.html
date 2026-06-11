@@ -31,8 +31,14 @@
   --glow-amber:rgba(255,159,10,.4);
 }
 html,body{height:100%;font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;overflow:hidden}
-body{background:linear-gradient(145deg,#000,#0a0a0a,#111);background-attachment:fixed}
+body{
+  background:radial-gradient(ellipse at 20% 20%,#2d1b69 0%,#11142d 40%,#0a0a1a 100%);
+  background-attachment:fixed;
+}
 #app{max-width:430px;margin:0 auto;height:100dvh;background:transparent;display:flex;flex-direction:column;position:relative;overflow:hidden}
+/* Background orbs */
+#app::before{content:'';position:absolute;width:300px;height:300px;border-radius:50%;top:-80px;left:-60px;background:radial-gradient(circle,rgba(120,60,255,.35),transparent 70%);filter:blur(40px);pointer-events:none;z-index:0}
+#app::after{content:'';position:absolute;width:250px;height:250px;border-radius:50%;bottom:120px;right:-40px;background:radial-gradient(circle,rgba(60,100,255,.3),transparent 70%);filter:blur(35px);pointer-events:none;z-index:0}
 
 /* ── SETUP ── */
 #setup{position:absolute;inset:0;background:rgba(15,20,50,.95);backdrop-filter:blur(40px);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;overflow-y:auto}
@@ -49,7 +55,14 @@ body{background:linear-gradient(145deg,#000,#0a0a0a,#111);background-attachment:
 .setup-err{background:rgba(255,69,58,.15);border:0.5px solid rgba(255,69,58,.4);border-radius:12px;padding:12px 14px;margin-top:12px;font-size:12px;color:#ff453a;text-align:left;display:none}
 
 /* ── TOPBAR ── */
-.topbar{background:rgba(0,0,0,.8);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);padding:10px 14px 0;border-bottom:1px solid rgba(255,255,255,.12);flex-shrink:0}
+.topbar{
+  background:linear-gradient(180deg,rgba(15,10,40,.8),rgba(10,8,30,.7));
+  backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+  padding:10px 14px 0;
+  border-bottom:0.5px solid rgba(255,255,255,.1);
+  flex-shrink:0;position:relative;z-index:5;
+  box-shadow:0 4px 20px rgba(0,0,0,.2);
+}
 .topbar-row{display:flex;align-items:center;justify-content:space-between;padding:0 0 8px}
 .app-title{font-size:17px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:7px}
 .sdot{width:8px;height:8px;border-radius:50%;background:#ccc;transition:background .3s;flex-shrink:0}
@@ -60,15 +73,33 @@ body{background:linear-gradient(145deg,#000,#0a0a0a,#111);background-attachment:
 .top-btns{display:flex;gap:6px}
 .btn-ev{background:rgba(255,255,255,.12);border:0.5px solid rgba(255,255,255,.25);border-radius:20px;padding:6px 13px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;color:#fff;backdrop-filter:blur(10px)}
 .btn-nw{background:rgba(220,220,220,.9);color:#000;border:none;border-radius:20px;padding:6px 13px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
-.tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.1)}
-.tab{flex:1;text-align:center;padding:8px 2px;font-size:11px;font-weight:500;cursor:pointer;color:rgba(255,255,255,.35);border-bottom:2px solid transparent;white-space:nowrap}
-.tab.active{color:#fff;border-bottom-color:#fff}
+.tabs{display:none}
+.tab{display:none}
+
 .inv-ctrl{padding:8px 0 0}
 .srow{display:flex;gap:6px}
 .swrap{flex:1;position:relative}
 .swrap span{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none}
 .swrap input{width:100%;padding:8px 8px 8px 30px;border:0.5px solid rgba(255,255,255,.2);border-radius:12px;font-size:13px;background:rgba(255,255,255,.1);backdrop-filter:blur(20px);font-family:inherit;color:#fff;outline:none}
 .swrap input::placeholder{color:rgba(255,255,255,.4)}
+
+/* BOTTOM NAV */
+.bottom-nav{
+  flex-shrink:0;height:72px;
+  background:linear-gradient(180deg,rgba(15,10,40,.75),rgba(8,5,25,.95));
+  backdrop-filter:blur(50px);-webkit-backdrop-filter:blur(50px);
+  border-top:0.5px solid rgba(255,255,255,.15);
+  display:flex;align-items:flex-start;padding-top:10px;
+  box-shadow:0 -8px 40px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.12);
+  z-index:10;position:relative;
+}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:0 4px}
+.nav-ico{font-size:22px;transition:all .2s;line-height:1}
+.nav-ico.on{filter:drop-shadow(0 0 8px rgba(180,140,255,.9))}
+.nav-lbl{font-size:9px;font-weight:500;color:rgba(255,255,255,.3);letter-spacing:.02em;transition:all .2s}
+.nav-lbl.on{color:#fff;font-weight:700}
+.nav-dot{width:4px;height:4px;border-radius:50%;background:rgba(180,140,255,.9);margin:0 auto;box-shadow:0 0 8px rgba(180,140,255,.7)}
+
 .sort-btn{background:rgba(255,255,255,.1);border:0.5px solid rgba(255,255,255,.2);border-radius:12px;padding:8px 11px;font-size:12px;cursor:pointer;color:#fff;font-family:inherit;white-space:nowrap;backdrop-filter:blur(20px)}
 .chips{display:flex;gap:5px;overflow-x:auto;padding:8px 0;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
@@ -76,16 +107,29 @@ body{background:linear-gradient(145deg,#000,#0a0a0a,#111);background-attachment:
 .chip.on{background:rgba(220,220,220,.9);color:#000;border-color:transparent;font-weight:600}
 
 /* ── VIEWS ── */
-.view{flex:1;overflow-y:auto;padding:8px 14px 80px;-webkit-overflow-scrolling:touch;display:none;background:transparent}
+.view{flex:1;overflow-y:auto;padding:8px 14px 90px;-webkit-overflow-scrolling:touch;display:none;background:transparent;position:relative;z-index:1}
 .view.active{display:block}
-.scan-view{flex:1;padding:14px;overflow-y:auto;display:none;background:transparent}
+.scan-view{flex:1;padding:14px;overflow-y:auto;display:none;background:transparent;position:relative;z-index:1}
 .scan-view.active{display:block}
 
 /* ── LIST ── */
 .gh{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.4);padding:10px 2px 5px;position:sticky;top:0;background:transparent;z-index:1}
-.irow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r);border:0.5px solid rgba(255,255,255,.18);margin-bottom:7px;cursor:pointer;background:rgba(255,255,255,.08);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 4px 16px rgba(0,0,0,.15),inset 0 0.5px 0 rgba(255,255,255,.2)}
-.irow:active{background:rgba(255,255,255,.15);transform:scale(.99)}
-.ithumb{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;object-fit:cover;background:rgba(255,255,255,.12);border:0.5px solid rgba(255,255,255,.2)}
+.irow{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border-radius:16px;
+  border:0.5px solid rgba(255,255,255,.2);
+  margin-bottom:7px;cursor:pointer;
+  background:linear-gradient(135deg,rgba(255,255,255,.13) 0%,rgba(255,255,255,.05) 50%,rgba(255,255,255,.08) 100%);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:0 4px 20px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.15);
+  position:relative;overflow:hidden;
+}
+.irow::before{content:'';position:absolute;top:0;left:0;right:0;height:45%;background:linear-gradient(180deg,rgba(255,255,255,.07),transparent);pointer-events:none;border-radius:16px 16px 0 0}
+.irow:active{background:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,.1));transform:scale(.99)}
+.ithumb{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;object-fit:cover;
+  background:linear-gradient(135deg,rgba(255,255,255,.15),rgba(255,255,255,.07));
+  border:0.5px solid rgba(255,255,255,.2);
+  box-shadow:0 2px 8px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.2)}
 .imain{flex:1;min-width:0}
 .iname{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .isub{font-size:11px;color:var(--text2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -104,7 +148,7 @@ body{background:linear-gradient(145deg,#000,#0a0a0a,#111);background-attachment:
 /* ── SHEETS ── */
 .overlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:30}
 .overlay.on{display:block}
-.sheet{position:absolute;bottom:0;left:0;right:0;background:rgba(18,22,50,.92);backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);border:0.5px solid rgba(255,255,255,.18);border-bottom:none;border-radius:24px 24px 0 0;z-index:40;max-height:92%;display:none;flex-direction:column;box-shadow:0 -20px 60px rgba(0,0,0,.4)}
+.sheet{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(170deg,rgba(30,20,70,.97),rgba(12,8,35,.98));backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);border:0.5px solid rgba(255,255,255,.2);border-bottom:none;border-radius:24px 24px 0 0;z-index:40;max-height:92%;display:none;flex-direction:column;box-shadow:0 -20px 80px rgba(100,50,200,.3),0 -40px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.2)}
 .sheet.on{display:flex}
 .sheet-scroll{flex:1;overflow-y:auto;padding:16px 16px 0}
 .sheet-foot{flex-shrink:0;padding:10px 16px calc(env(safe-area-inset-bottom,0px) + 12px);border-top:0.5px solid rgba(255,255,255,.12);background:transparent}
@@ -214,19 +258,13 @@ body{background:linear-gradient(145deg,#000,#0a0a0a,#111);background-attachment:
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="topbar-row">
-      <div class="app-title">ITS Inventory <div class="sdot" id="sdot"></div></div><span style="font-size:9px;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-left:2px">v2.1</span>
+      <div class="app-title" style="text-shadow:0 0 24px rgba(150,100,255,.5);font-size:19px;font-weight:800;letter-spacing:-.3px">ITS Inventory <div class="sdot" id="sdot"></div></div><span style="font-size:9px;color:rgba(255,255,255,.3);font-family:'IBM Plex Mono',monospace;margin-left:2px">v2.2</span>
       <div class="top-btns">
         
-        <button class="btn-nw" onclick="openSheet('new-sheet')">➕ New</button>
+        <button onclick="openSheet('new-sheet')" style="background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(240,235,255,.92));color:#1a0a3e;border:0.5px solid rgba(255,255,255,.5);border-radius:22px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(150,100,255,.4),inset 0 1px 0 rgba(255,255,255,.8)">＋ New</button>
       </div>
     </div>
-    <div class="tabs">
-      <div class="tab active" data-tab="inv">📦 Inventory</div>
-      
-      <div class="tab" data-tab="scan">▦ Scan</div>
-      <div class="tab" data-tab="excel">📊 Excel</div>
-      <div class="tab" data-tab="stats">📈 Stats</div>
-    </div>
+    
     <div class="inv-ctrl" id="inv-ctrl">
       <div class="srow">
         <div class="swrap"><span>🔍</span><input type="text" id="srch" placeholder="Search brand, item..." oninput="renderInv()"></div>
@@ -237,17 +275,17 @@ body{background:linear-gradient(145deg,#000,#0a0a0a,#111);background-attachment:
   </div>
 
   <div id="inv-stats" style="display:flex;gap:7px;padding:4px 14px 0;flex-shrink:0">
-    <div style="flex:1;background:rgba(255,255,255,.08);border:0.5px solid rgba(255,255,255,.15);border-radius:12px;padding:8px 10px;backdrop-filter:blur(20px);text-align:center">
-      <div id="stat-total" style="font-size:18px;font-weight:700;color:#fff;font-family:'IBM Plex Mono',monospace">—</div>
-      <div style="font-size:9px;color:rgba(255,255,255,.4);margin-top:1px">Total</div>
+    <div style="flex:1;background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.06));border:0.5px solid rgba(255,255,255,.2);border-radius:13px;padding:8px 6px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.15)">
+      <div id="stat-total" style="font-size:19px;font-weight:800;color:#fff;font-family:'IBM Plex Mono',monospace">—</div>
+      <div style="font-size:8px;color:rgba(255,255,255,.4);margin-top:1px;text-transform:uppercase;letter-spacing:.04em">Total</div>
     </div>
-    <div style="flex:1;background:rgba(220,220,220,.06);border:0.5px solid rgba(220,220,220,.15);border-radius:12px;padding:8px 10px;backdrop-filter:blur(20px);text-align:center">
-      <div id="stat-avail" style="font-size:18px;font-weight:700;color:#e0e0e0;font-family:'IBM Plex Mono',monospace">—</div>
-      <div style="font-size:9px;color:rgba(220,220,220,.5);margin-top:1px">Available</div>
+    <div style="flex:1;background:linear-gradient(135deg,rgba(48,209,88,.2),rgba(48,209,88,.08));border:0.5px solid rgba(48,209,88,.35);border-radius:13px;padding:8px 6px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.2),inset 0 1px 0 rgba(48,209,88,.2)">
+      <div id="stat-avail" style="font-size:19px;font-weight:800;color:#30d158;font-family:'IBM Plex Mono',monospace">—</div>
+      <div style="font-size:8px;color:rgba(48,209,88,.6);margin-top:1px;text-transform:uppercase;letter-spacing:.04em">Available</div>
     </div>
-    <div style="flex:1;background:rgba(136,136,136,.06);border:0.5px solid rgba(136,136,136,.15);border-radius:12px;padding:8px 10px;backdrop-filter:blur(20px);text-align:center">
-      <div id="stat-inuse" style="font-size:18px;font-weight:700;color:#aaa;font-family:'IBM Plex Mono',monospace">—</div>
-      <div style="font-size:9px;color:rgba(136,136,136,.6);margin-top:1px">In use</div>
+    <div style="flex:1;background:linear-gradient(135deg,rgba(255,159,10,.2),rgba(255,159,10,.08));border:0.5px solid rgba(255,159,10,.35);border-radius:13px;padding:8px 6px;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,159,10,.2)">
+      <div id="stat-inuse" style="font-size:19px;font-weight:800;color:#ff9f0a;font-family:'IBM Plex Mono',monospace">—</div>
+      <div style="font-size:8px;color:rgba(255,159,10,.6);margin-top:1px;text-transform:uppercase;letter-spacing:.04em">In use</div>
     </div>
   </div>
   
@@ -324,6 +362,27 @@ body{background:linear-gradient(145deg,#000,#0a0a0a,#111);background-attachment:
   <div class="sheet" id="item-sheet">
     <div class="sheet-scroll" id="item-content"></div>
     <div class="sheet-foot" id="item-foot"></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav" id="bottom-nav">
+    <div class="nav-item" onclick="switchTo('inv')" id="nav-inv">
+      <div class="nav-ico on" id="ni-inv">📦</div>
+      <div class="nav-lbl on" id="nl-inv">Inventory</div>
+      <div class="nav-dot" id="nd-inv"></div>
+    </div>
+    <div class="nav-item" onclick="switchTo('scan')" id="nav-scan">
+      <div class="nav-ico" id="ni-scan">▦</div>
+      <div class="nav-lbl" id="nl-scan">Scan</div>
+    </div>
+    <div class="nav-item" onclick="switchTo('excel')" id="nav-excel">
+      <div class="nav-ico" id="ni-excel">📊</div>
+      <div class="nav-lbl" id="nl-excel">Excel</div>
+    </div>
+    <div class="nav-item" onclick="switchTo('stats')" id="nav-stats">
+      <div class="nav-ico" id="ni-stats">📈</div>
+      <div class="nav-lbl" id="nl-stats">Stats</div>
+    </div>
   </div>
 
   <!-- CYBER LOADER -->
@@ -601,14 +660,21 @@ function initApp() {
 
 function switchTo(tab) {
   currentTab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
   document.querySelectorAll('.view,.scan-view').forEach(v => v.classList.remove('active'));
-  document.getElementById('view-'+tab)?.classList.add('active');
+  const v = document.getElementById('view-'+tab);
+  if(v) v.classList.add('active');
   document.getElementById('inv-ctrl').style.display = tab==='inv' ? '' : 'none';
+  ['inv','scan','excel','stats'].forEach(t => {
+    const ico=document.getElementById('ni-'+t);
+    const lbl=document.getElementById('nl-'+t);
+    const dot=document.getElementById('nd-'+t);
+    if(ico) ico.classList.toggle('on',t===tab);
+    if(lbl) lbl.classList.toggle('on',t===tab);
+    if(dot) dot.style.display = t===tab?'block':'none';
+  });
   if (tab==='scan') initScanner(); else stopScanner();
   if (tab==='excel') renderExcel();
   if (tab==='stats') renderStats();
-  
 }
 
 // ═══════════════════════════════════════════════════════════════

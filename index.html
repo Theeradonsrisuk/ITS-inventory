@@ -295,6 +295,7 @@ body{
   <!-- VIEWS -->
   <div class="view active" id="view-inv"></div>
   
+  <div class="view" id="view-events"></div>
   <div class="scan-view" id="view-scan">
     <div id="qr-reader" style="border-radius:14px;overflow:hidden;background:#000;margin-bottom:12px"></div>
     <div id="scan-result" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px">
@@ -1066,8 +1067,9 @@ async function createEvent() {
   // Close and update UI immediately
   closeSheets();
   renderInv();
-  renderEventsTab();
   toast('Event created · '+ids.length+' items ✓');
+  // Render events tab safely after close
+  setTimeout(()=>{ try{renderEventsTab();}catch(e){console.log('events tab',e);} }, 100);
 
   // Sync in background
   setSyncDot('syncing');

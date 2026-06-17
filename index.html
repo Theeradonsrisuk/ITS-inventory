@@ -32,13 +32,13 @@
 }
 html,body{height:100%;font-family:-apple-system,'SF Pro Display',system-ui,sans-serif;overflow:hidden}
 body{
-  background:radial-gradient(ellipse at 20% 20%,#2d1b69 0%,#11142d 40%,#0a0a1a 100%);
+  background:radial-gradient(ellipse at 20% 20%,#4a2f8a 0%,#1e2a5e 40%,#12183a 100%);
   background-attachment:fixed;
 }
 #app{max-width:430px;margin:0 auto;height:100dvh;background:transparent;display:flex;flex-direction:column;position:relative;overflow:hidden}
 /* Background orbs */
-#app::before{content:'';position:absolute;width:300px;height:300px;border-radius:50%;top:-80px;left:-60px;background:radial-gradient(circle,rgba(120,60,255,.35),transparent 70%);filter:blur(40px);pointer-events:none;z-index:0}
-#app::after{content:'';position:absolute;width:250px;height:250px;border-radius:50%;bottom:120px;right:-40px;background:radial-gradient(circle,rgba(60,100,255,.3),transparent 70%);filter:blur(35px);pointer-events:none;z-index:0}
+#app::before{content:'';position:absolute;width:300px;height:300px;border-radius:50%;top:-80px;left:-60px;background:radial-gradient(circle,rgba(140,90,255,.45),transparent 70%);filter:blur(40px);pointer-events:none;z-index:0}
+#app::after{content:'';position:absolute;width:250px;height:250px;border-radius:50%;bottom:120px;right:-40px;background:radial-gradient(circle,rgba(80,120,255,.4),transparent 70%);filter:blur(35px);pointer-events:none;z-index:0}
 
 /* ── SETUP ── */
 #setup{position:absolute;inset:0;background:rgba(15,20,50,.95);backdrop-filter:blur(40px);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;overflow-y:auto}
@@ -56,7 +56,7 @@ body{
 
 /* ── TOPBAR ── */
 .topbar{
-  background:linear-gradient(180deg,rgba(15,10,40,.8),rgba(10,8,30,.7));
+  background:linear-gradient(180deg,rgba(30,20,70,.75),rgba(20,15,55,.65));
   backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
   padding:10px 14px 0;
   border-bottom:0.5px solid rgba(255,255,255,.1);
@@ -86,7 +86,7 @@ body{
 /* BOTTOM NAV */
 .bottom-nav{
   flex-shrink:0;height:72px;
-  background:linear-gradient(180deg,rgba(15,10,40,.75),rgba(8,5,25,.95));
+  background:linear-gradient(180deg,rgba(30,20,70,.8),rgba(20,12,50,.92));
   backdrop-filter:blur(50px);-webkit-backdrop-filter:blur(50px);
   border-top:0.5px solid rgba(255,255,255,.15);
   display:flex;align-items:flex-start;padding-top:10px;
@@ -119,7 +119,7 @@ body{
   border-radius:16px;
   border:0.5px solid rgba(255,255,255,.2);
   margin-bottom:7px;cursor:pointer;
-  background:linear-gradient(135deg,rgba(255,255,255,.13) 0%,rgba(255,255,255,.05) 50%,rgba(255,255,255,.08) 100%);
+  background:linear-gradient(135deg,rgba(255,255,255,.18) 0%,rgba(255,255,255,.09) 50%,rgba(255,255,255,.13) 100%);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   box-shadow:0 4px 20px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.15);
   position:relative;overflow:hidden;
@@ -148,7 +148,7 @@ body{
 /* ── SHEETS ── */
 .overlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:30}
 .overlay.on{display:block}
-.sheet{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(170deg,rgba(30,20,70,.97),rgba(12,8,35,.98));backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);border:0.5px solid rgba(255,255,255,.2);border-bottom:none;border-radius:24px 24px 0 0;z-index:40;max-height:92%;display:none;flex-direction:column;box-shadow:0 -20px 80px rgba(100,50,200,.3),0 -40px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.2)}
+.sheet{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(170deg,rgba(45,30,100,.95),rgba(25,15,65,.97));backdrop-filter:blur(60px);-webkit-backdrop-filter:blur(60px);border:0.5px solid rgba(255,255,255,.2);border-bottom:none;border-radius:24px 24px 0 0;z-index:40;max-height:92%;display:none;flex-direction:column;box-shadow:0 -20px 80px rgba(100,50,200,.3),0 -40px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.2)}
 .sheet.on{display:flex}
 .sheet-scroll{flex:1;overflow-y:auto;padding:16px 16px 0}
 .sheet-foot{flex-shrink:0;padding:10px 16px calc(env(safe-area-inset-bottom,0px) + 12px);border-top:0.5px solid rgba(255,255,255,.12);background:transparent}
@@ -1038,39 +1038,46 @@ function toggleEvItem(id) {
 }
 
 async function createEvent() {
+  // Check all elements exist first
+  const nameEl = document.getElementById('ev-name');
+  const startEl = document.getElementById('ev-start');
+  const endEl = document.getElementById('ev-end');
+  if (!nameEl||!startEl||!endEl) { toast('Event form not found — reload app'); return; }
+
+  const name = nameEl.value.trim();
+  const start = startEl.value;
+  const end = endEl.value;
+  if (!name) { toast('Please enter an event name'); return; }
+  if (!start||!end) { toast('Please select start and end dates'); return; }
+  if (!evSelected.size) { toast('Please select at least one item'); return; }
+
+  const ids = [...evSelected].map(Number);
+  const ev = {id:Date.now(), name, start, end, itemIds:ids, active:true};
+
+  // Update items locally first
+  ids.forEach(id => {
+    const i=items.find(x=>Number(x.id)===id); if(!i) return;
+    i.status='In use at event';
+    if(!i.history) i.history=[];
+    i.history.push({date:nowDate(), note:'⚡ Taken to event: '+name});
+  });
+  events.push(ev);
+
+  // Close and update UI immediately
+  closeSheets();
+  renderInv();
+  renderEventsTab();
+  toast('Event created · '+ids.length+' items ✓');
+
+  // Sync in background
+  setSyncDot('syncing');
   try {
-    const name = document.getElementById('ev-name').value.trim();
-    const start = document.getElementById('ev-start').value;
-    const end = document.getElementById('ev-end').value;
-    if (!name) { toast('Please enter an event name'); return; }
-    if (!start||!end) { toast('Please select start and end dates'); return; }
-    if (!evSelected.size) { toast('Please select at least one item'); return; }
-    const ids = [...evSelected].map(Number);
-    const ev = {id:Date.now(), name, start, end, itemIds:ids, active:true};
-    // Update items locally first — UI responds immediately
-    ids.forEach(id => {
-      const i=items.find(x=>Number(x.id)===id); if(!i) return;
-      i.status='In use at event';
-      if(!i.history) i.history=[];
-      i.history.push({date:nowDate(), note:'⚡ Taken to event: '+name});
-    });
-    events.push(ev);
-    // Close sheet and update UI right away — don't wait for sync
-    closeSheets();
-    renderInv();
-    toast('Event created · '+ids.length+' items ✓');
-    // Sync in background silently
-    try {
-      await syncEvent(ev, true);
-      await syncBulk(ids.map(id=>({id,status:'In use at event'})));
-      for (const id of ids) { const i=items.find(x=>x.id==id); if(i) await syncItem(i); }
-    } catch(syncErr) {
-      setSyncDot('err');
-      // Event still created locally — just sync failed
-    }
-  } catch(err) {
-    toast('Error: ' + err.message);
-    console.error('createEvent error:', err);
+    await syncEvent(ev, true);
+    await syncBulk(ids.map(id=>({id,status:'In use at event'})));
+    for (const id of ids) { const i=items.find(x=>x.id==id); if(i) syncItem(i); }
+    setSyncDot('ok');
+  } catch(e) {
+    setSyncDot('err');
   }
 }
 

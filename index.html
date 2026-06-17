@@ -261,6 +261,7 @@ body{
       <div class="app-title" style="text-shadow:0 0 24px rgba(150,100,255,.5);font-size:19px;font-weight:800;letter-spacing:-.3px">ITS Inventory <div class="sdot" id="sdot"></div></div><span style="font-size:9px;color:rgba(255,255,255,.3);font-family:'IBM Plex Mono',monospace;margin-left:2px">v2.2</span>
       <div class="top-btns">
         
+        <button onclick="openSheet('ev-sheet')" style="background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.06));color:#fff;border:0.5px solid rgba(255,255,255,.3);border-radius:22px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.2)">📅 Event</button>
         <button onclick="openSheet('new-sheet')" style="background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(240,235,255,.92));color:#1a0a3e;border:0.5px solid rgba(255,255,255,.5);border-radius:22px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 16px rgba(150,100,255,.4),inset 0 1px 0 rgba(255,255,255,.8)">＋ New</button>
       </div>
     </div>
@@ -358,7 +359,36 @@ body{
     <div class="sheet-foot"><button class="btn-s" onclick="closeSheets()">Close</button></div>
   </div>
 
-  <!-- ITEM DETAIL SHEET -->
+  <!-- EVENT CREATE SHEET -->
+  <div class="sheet" id="ev-sheet">
+    <div class="sheet-scroll">
+      <div class="mh"></div>
+      <div class="sh-title">📅 Create event</div>
+      <div class="flabel">Event name *</div>
+      <input class="finput" id="ev-name" placeholder="e.g. Interop Bangkok 2025">
+      <div class="drow">
+        <div><div class="flabel">Start *</div><input class="finput" type="date" id="ev-start"></div>
+        <div><div class="flabel">End *</div><input class="finput" type="date" id="ev-end"></div>
+      </div>
+      <div class="flabel">Filter by brand</div>
+      <div class="bchips" id="ev-brands"></div>
+      <div class="flabel">Select items to bring</div>
+      <div id="ev-items" style="border:0.5px solid rgba(255,255,255,.15);border-radius:12px;padding:4px;max-height:200px;overflow-y:auto"></div>
+      <div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-top:6px" id="ev-count">0 selected</div>
+    </div>
+    <div class="sheet-foot">
+      <button class="btn-p" onclick="createEvent()">📅 Create event</button>
+      <button class="btn-s" onclick="closeSheets()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- EVENT DETAIL SHEET -->
+  <div class="sheet" id="evd-sheet">
+    <div class="sheet-scroll" id="evd-content"></div>
+    <div class="sheet-foot"><button class="btn-s" onclick="closeSheets()">Close</button></div>
+  </div>
+
+    <!-- ITEM DETAIL SHEET -->
   <div class="sheet" id="item-sheet">
     <div class="sheet-scroll" id="item-content"></div>
     <div class="sheet-foot" id="item-foot"></div>
@@ -370,6 +400,10 @@ body{
       <div class="nav-ico on" id="ni-inv">📦</div>
       <div class="nav-lbl on" id="nl-inv">Inventory</div>
       <div class="nav-dot" id="nd-inv"></div>
+    </div>
+    <div class="nav-item" onclick="switchTo('events')" id="nav-events">
+      <div class="nav-ico" id="ni-events">📅</div>
+      <div class="nav-lbl" id="nl-events">Events</div>
     </div>
     <div class="nav-item" onclick="switchTo('scan')" id="nav-scan">
       <div class="nav-ico" id="ni-scan">▦</div>
@@ -664,7 +698,7 @@ function switchTo(tab) {
   const v = document.getElementById('view-'+tab);
   if(v) v.classList.add('active');
   document.getElementById('inv-ctrl').style.display = tab==='inv' ? '' : 'none';
-  ['inv','scan','excel','stats'].forEach(t => {
+  ['inv','events','scan','excel','stats'].forEach(t => {
     const ico=document.getElementById('ni-'+t);
     const lbl=document.getElementById('nl-'+t);
     const dot=document.getElementById('nd-'+t);
@@ -672,6 +706,7 @@ function switchTo(tab) {
     if(lbl) lbl.classList.toggle('on',t===tab);
     if(dot) dot.style.display = t===tab?'block':'none';
   });
+  if (tab==='events') renderEventsTab();
   if (tab==='scan') initScanner(); else stopScanner();
   if (tab==='excel') renderExcel();
   if (tab==='stats') renderStats();

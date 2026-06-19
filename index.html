@@ -379,7 +379,7 @@ body{
       <div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-top:6px" id="ev-count">0 selected</div>
     </div>
     <div class="sheet-foot">
-      <button class="btn-p" onclick="createEvent()">📅 Create event</button>
+      <button class="btn-p" onclick="event.stopPropagation();createEvent()">📅 Create event</button>
       <button class="btn-s" onclick="closeSheets()">Cancel</button>
     </div>
   </div>
@@ -723,13 +723,17 @@ function openSheet(id) {
   document.getElementById(id).classList.add('on');
   // Pre-fill event sheet dates
   if (id==='ev-sheet') {
-    document.getElementById('ev-name').value = '';
-    document.getElementById('ev-start').value = today();
-    document.getElementById('ev-end').value = today();
-    evBrand='All'; evSelected=new Set();
-    buildEvBrands(); renderEvItems();
-    // Focus name field after sheet opens
-    setTimeout(()=>{ const n=document.getElementById('ev-name'); if(n) n.focus(); }, 300);
+    const nameEl = document.getElementById('ev-name');
+    const startEl = document.getElementById('ev-start');
+    const endEl = document.getElementById('ev-end');
+    if(nameEl) nameEl.value = '';
+    if(startEl) startEl.value = today();
+    if(endEl) endEl.value = today();
+    evBrand='All';
+    evSelected = new Set(); // fresh Set every time
+    buildEvBrands();
+    renderEvItems();
+    setTimeout(()=>{ if(nameEl) nameEl.focus(); }, 300);
   }
   if (id==='new-sheet') {
     document.getElementById('brand-dl').innerHTML = brands().map(b=>`<option value="${b}">`).join('');
@@ -1039,6 +1043,8 @@ function toggleEvItem(id) {
 }
 
 async function createEvent() {
+  toast('Processing...');
+  await new Promise(r=>setTimeout(r,50)); // let toast show
   // Check all elements exist first
   const nameEl = document.getElementById('ev-name');
   const startEl = document.getElementById('ev-start');

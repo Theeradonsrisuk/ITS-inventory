@@ -379,7 +379,7 @@ body{
       <div style="font-size:11px;color:rgba(255,255,255,.4);text-align:center;margin-top:6px" id="ev-count">0 selected</div>
     </div>
     <div class="sheet-foot">
-      <button class="btn-p" onclick="event.stopPropagation();createEvent()">📅 Create event</button>
+      <button class="btn-p" onclick="createEvent();return false;">📅 Create event</button>
       <button class="btn-s" onclick="closeSheets()">Cancel</button>
     </div>
   </div>
@@ -1042,51 +1042,60 @@ function toggleEvItem(id) {
   renderEvItems();
 }
 
-async function createEvent() {
-  toast('Processing...');
-  await new Promise(r=>setTimeout(r,50)); // let toast show
-  // Check all elements exist first
-  const nameEl = document.getElementById('ev-name');
-  const startEl = document.getElementById('ev-start');
-  const endEl = document.getElementById('ev-end');
-  if (!nameEl||!startEl||!endEl) { toast('Event form not found — reload app'); return; }
+function createEvent() {
+  var nameEl = document.getElementById('ev-name');
+  var startEl = document.getElementById('ev-start');
+  var endEl = document.getElementById('ev-end');
 
-  const name = nameEl.value.trim();
-  const start = startEl.value;
-  const end = endEl.value;
-  if (!name) { toast('Please enter an event name'); return; }
-  if (!start||!end) { toast('Please select start and end dates'); return; }
-  if (!evSelected.size) { toast('Please select at least one item'); return; }
+  if (!nameEl) { alert('ev-name not found'); return; }
+  if (!startEl) { alert('ev-start not found'); return; }
 
-  const ids = [...evSelected].map(Number);
-  const ev = {id:Date.now(), name, start, end, itemIds:ids, active:true};
+  var name = nameEl.value.trim();
+  var start = startEl.value;
+  var end = endEl.value;
 
-  // Update items locally first
-  ids.forEach(id => {
-    const i=items.find(x=>Number(x.id)===id); if(!i) return;
-    i.status='In use at event';
-    if(!i.history) i.history=[];
-    i.history.push({date:nowDate(), note:'⚡ Taken to event: '+name});
-  });
+  if (!name) { alert('Enter event name'); return; }
+  if (!start) { alert('Select start date'); return; }
+  if (evSelected.size === 0) { alert('Select at least one item'); return; }
+
+  var ids = [];
+  evSelected.forEach(function(id) { ids.push(Number(id)); });
+
+  // Update item statuses
+  for (var k = 0; k < ids.length; k++) {
+    var item = null;
+    for (var j = 0; j < items.length; j++) {
+      if (Number(items[j].id) === ids[k]) { item = items[j]; break; }
+    }
+    if (item) {
+      item.status = 'In use at event';
+      if (!item.history) item.history = [];
+      item.history.push({date: nowDate(), note: '⚡ Event: ' + name});
+    }
+  }
+
+  var ev = {id: Date.now(), name: name, start: start, end: end||start, itemIds: ids, active: true};
   events.push(ev);
 
-  // Close and update UI immediately
+  // Close sheet
   closeSheets();
+  
+  // Update UI
   renderInv();
-  toast('Event created · '+ids.length+' items ✓');
-  // Render events tab safely after close
-  setTimeout(()=>{ try{renderEventsTab();}catch(e){console.log('events tab',e);} }, 100);
+  setTimeout(function() {
+    renderEventsTab();
+    toast('Event created · ' + ids.length + ' items ✓');
+  }, 200);
 
-  // Sync in background
-  setSyncDot('syncing');
-  try {
-    await syncEvent(ev, true);
-    await syncBulk(ids.map(id=>({id,status:'In use at event'})));
-    for (const id of ids) { const i=items.find(x=>x.id==id); if(i) syncItem(i); }
-    setSyncDot('ok');
-  } catch(e) {
-    setSyncDot('err');
-  }
+  // Background sync - don't let it crash anything
+  setTimeout(function() {
+    try {
+      syncEvent(ev, true);
+      syncBulk(ids.map(function(id){ return {id:id, status:'In use at event'}; }));
+    } catch(e) {
+      console.log('sync error:', e);
+    }
+  }, 500);
 }
 
 function renderBanners() {
